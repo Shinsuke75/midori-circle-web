@@ -8,7 +8,6 @@
 <title>みどりの工作室 サークル活動</title>
 <link rel="icon" href="icons/app/icon-192.png">
 <link rel="apple-touch-icon" href="icons/app/icon-180.png">
-<link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-title" content="みどりサークル">
 <style>
   :root {
@@ -176,13 +175,18 @@
 
   const token = getToken();
 
+  // 専用リンクの印（トークン）。リンクの # のあと、? のあと、この端末に覚えたもの、の順に探す。
+  // ホーム画面に追加したとき、# のあとが落ちたり、覚えた分が別になったりする端末があるので、
+  // 見つけたら ? のあとにも入れておく（ホーム画面にはこのアドレスが登録される）。
   function getToken() {
-    const m = location.hash.match(/t=([0-9a-f]{32,128})/);
-    if (m) {
-      try { localStorage.setItem('midori_token', m[1]); } catch (e) {}
-      return m[1];
+    const pick = s => { const m = (s || '').match(/t=([0-9a-f]{32,128})/); return m ? m[1] : null; };
+    let t = pick(location.hash) || pick(location.search);
+    if (!t) { try { t = localStorage.getItem('midori_token'); } catch (e) {} }
+    if (t) {
+      try { localStorage.setItem('midori_token', t); } catch (e) {}
+      try { history.replaceState(null, '', location.pathname + '?t=' + t + '#t=' + t); } catch (e) {}
     }
-    try { return localStorage.getItem('midori_token'); } catch (e) { return null; }
+    return t;
   }
 
   function showMessage(text, isError) {
