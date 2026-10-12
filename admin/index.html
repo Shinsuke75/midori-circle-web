@@ -226,7 +226,7 @@ function render() {
   }, t.label, t.key === 'pending' && data.pending.length ? el('span', { class: 'num' }, data.pending.length) : null)));
   const view = document.getElementById('view');
   const draw = { events: viewEvents, members: viewMembers, pending: viewPending, admins: viewAdmins }[tab] || viewEvents;
-  view.replaceChildren(...draw());
+  view.replaceChildren(...draw().filter(c => c != null && c !== false));
 }
 
 function memberOptions(exclude) {
