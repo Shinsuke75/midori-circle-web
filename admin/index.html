@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>みどりの工作室 サークル活動 管理</title>
+<script src="https://accounts.google.com/gsi/client" async></script>
+<style>
+  :root {
+    --bg: #f6f4ee; --card: #ffffff; --ink: #2b2b26; --sub: #6b6a60;
+    --green: #3f6b3a; --green-soft: #e6efe3; --line: #dedad0; --warn: #a4442f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
+    font-size: 17px; line-height: 1.6;
+  }
+  header { background: var(--green); color: #fff; padding: 14px 16px 0; }
+  header .inner { max-width: 688px; margin: 0 auto; }
+  header h1 { margin: 0; font-size: 19px; letter-spacing: .04em; }
+  header .who { margin: 2px 0 0; font-size: 14px; opacity: .9; }
+  header .who button { display: inline; width: auto; margin: 0 0 0 8px; padding: 0 10px; font-size: 13px; font-weight: 400;
+    border: 1px solid rgba(255,255,255,.7); background: transparent; color: #fff; border-radius: 999px; }
+  nav { display: flex; gap: 4px; margin-top: 10px; overflow-x: auto; }
+  nav button { flex: 0 0 auto; width: auto; margin: 0; padding: 8px 14px; font-size: 15px; font-weight: 700;
+    border: none; border-radius: 10px 10px 0 0; background: rgba(255,255,255,.18); color: #fff; }
+  nav button.on { background: var(--bg); color: var(--green); }
+  nav .num { display: inline-block; min-width: 20px; padding: 0 6px; margin-left: 4px; border-radius: 999px;
+    background: var(--warn); color: #fff; font-size: 12px; }
+  main { max-width: 720px; margin: 0 auto; padding: 16px; }
+  .msg { padding: 12px 16px; border-radius: 10px; background: var(--card); border: 1px solid var(--green); margin-bottom: 16px; }
+  .msg.err { border-color: var(--warn); color: var(--warn); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .card.canceled { opacity: .65; }
+  .card.past { background: #fbfaf6; }
+  h2 { font-size: 17px; margin: 0 0 10px; color: var(--green); }
+  .date { font-size: 20px; font-weight: 700; margin: 0; }
+  .meta { color: var(--sub); font-size: 15px; margin: 2px 0 0; }
+  .badge { display: inline-block; font-size: 13px; font-weight: 700; padding: 1px 10px; border-radius: 999px; margin-left: 6px; vertical-align: 2px; }
+  .badge.stop { background: var(--warn); color: #fff; }
+  .badge.off { background: #888; color: #fff; }
+  .badge.soft { background: var(--green-soft); color: var(--green); }
+  button { font-family: inherit; cursor: pointer; }
+  .btn { display: inline-block; width: auto; margin: 6px 6px 0 0; padding: 8px 14px; font-size: 15px; font-weight: 700;
+    border-radius: 10px; border: 2px solid var(--green); background: #fff; color: var(--green); }
+  .btn.main { background: var(--green); color: #fff; }
+  .btn.warn { border-color: var(--warn); color: var(--warn); }
+  .btn.small { padding: 3px 10px; font-size: 13px; margin: 0 0 0 6px; border-width: 1px; }
+  button:disabled { opacity: .5; cursor: default; }
+  .people { list-style: none; margin: 10px 0 0; padding: 0; }
+  .people li { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+  .people li .n { flex: 1; }
+  .people label { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--sub); }
+  input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--green); }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+  select, input[type=text], input[type=date], input[type=time], input[type=number], input[type=email] {
+    font-family: inherit; font-size: 16px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink);
+  }
+  .form label { display: block; margin-top: 10px; font-size: 14px; color: var(--sub); }
+  .form input { width: 100%; }
+  .form .two { display: flex; gap: 10px; }
+  .form .two > div { flex: 1; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th, td { text-align: left; padding: 8px 6px; border-top: 1px solid var(--line); vertical-align: middle; }
+  th { font-size: 13px; color: var(--sub); font-weight: 400; }
+  td.num { text-align: right; }
+  .sub { color: var(--sub); font-size: 14px; }
+  .center { text-align: center; padding: 40px 16px; }
+  #signin { display: inline-block; margin-top: 16px; }
+  details summary { cursor: pointer; color: var(--green); font-weight: 700; }
+  @media (max-width: 520px) {
+    .hide-sp { display: none; }
+    .form .two { flex-direction: column; gap: 0; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="inner">
+    <h1>みどりの工作室 サークル活動 管理</h1>
+    <p class="who" id="who"></p>
+    <nav id="nav" hidden></nav>
+  </div>
+</header>
+<main>
+  <div id="message" class="msg" hidden></div>
+  <div id="view"></div>
+</main>
+<script>
+const CLIENT_ID = '79767718688-kkcivdeojo19iaktbs2he97200ulnlio.apps.googleusercontent.com';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxtI6yRRm6wFwVWxJaZZWr0A7KM1ohJ1hHwjubDS15ftzXF6ZZLXGheJjYkOlP4rYBk/exec';
+
+const TABS = [
+  { key: 'events', label: '開催日' },
+  { key: 'members', label: '会員' },
+  { key: 'pending', label: '新しい登録' },
+  { key: 'admins', label: '管理者' }
+];
+let session = load('midori_admin_session');
+let tab = load('midori_admin_tab') || 'events';
+let data = null;
+let busy = false;
+
+function load(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
+function save(k, v) { try { v === null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch (e) {} }
+
+function el(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const k in attrs || {}) {
+    const v = attrs[k];
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (v === true) e.setAttribute(k, '');
+    else if (v !== false && v != null) e.setAttribute(k, v);
+  }
+  kids.flat().forEach(c => { if (c != null && c !== false) e.append(c.nodeType ? c : String(c)); });
+  return e;
+}
+
+function message(text, isErr) {
+  const m = document.getElementById('message');
+  if (!text) { m.hidden = true; return; }
+  m.hidden = false;
+  m.className = 'msg' + (isErr ? ' err' : '');
+  m.textContent = text;
+}
+
+async function call(body) {
+  const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+  return res.json();
+}
+
+// ---------- ログイン ----------
+
+function showLogin(note) {
+  document.getElementById('nav').hidden = true;
+  document.getElementById('who').textContent = '';
+  const view = document.getElementById('view');
+  view.replaceChildren(el('div', { class: 'card center' },
+    el('p', {}, '管理者として登録したGoogleアカウントでログインしてください。'),
+    note ? el('p', { class: 'sub' }, note) : null,
+    el('div', { id: 'signin' })
+  ));
+  const draw = () => {
+    if (!window.google || !google.accounts) { setTimeout(draw, 200); return; }
+    google.accounts.id.initialize({ client_id: CLIENT_ID, callback: onCredential, auto_select: false });
+    google.accounts.id.renderButton(document.getElementById('signin'), { theme: 'outline', size: 'large', text: 'signin_with', locale: 'ja' });
+  };
+  draw();
+}
+
+async function onCredential(resp) {
+  message('確認しています…');
+  try {
+    const r = await call({ action: 'login', idToken: resp.credential });
+    if (!r.ok) {
+      message(r.error === 'not_admin' ? r.email + ' は管理者として登録されていません。' : 'ログインできませんでした。もう一度お試しください。', true);
+      return;
+    }
+    session = r.session;
+    save('midori_admin_session', session);
+    message('');
+    await refresh();
+  } catch (e) {
+    message('通信できませんでした。電波のよいところで、もう一度お試しください。', true);
+  }
+}
+
+function logout() {
+  session = null;
+  save('midori_admin_session', null);
+  if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
+  message('');
+  showLogin('ログアウトしました。');
+}
+
+// ---------- データのやりとり ----------
+
+async function refresh() {
+  try {
+    const r = await call({ action: 'data', session: session });
+    if (!r.ok) { session = null; save('midori_admin_session', null); showLogin('ログインの期限が切れました。もう一度ログインしてください。'); return; }
+    data = r;
+    render();
+  } catch (e) {
+    message('通信できませんでした。電波のよいところで、もう一度お試しください。', true);
+  }
+}
+
+async function act(body, confirmText) {
+  if (busy) return;
+  if (confirmText && !confirm(confirmText)) return;
+  busy = true;
+  document.querySelectorAll('main button, main input, main select').forEach(b => b.disabled = true);
+  message('処理しています…');
+  try {
+    body.session = session;
+    const r = await call(body);
+    if (r.error === 'login') { showLogin('ログインの期限が切れました。もう一度ログインしてください。'); message(''); return; }
+    if (!r.ok) { message(r.msg || 'うまくいきませんでした。', true); busy = false; render(); return; }
+    data = r;
+    busy = false;
+    render();
+    message(r.msg || '');
+    if (r.url) window.open(r.url, '_blank', 'noopener');
+  } catch (e) {
+    message('通信できませんでした。電波のよいところで、もう一度お試しください。', true);
+  } finally {
+    busy = false;
+    document.querySelectorAll('main button, main input, main select').forEach(b => b.disabled = false);
+  }
+}
+
+// ---------- 表示 ----------
+
+function render() {
+  document.getElementById('who').replaceChildren(data.me + ' でログイン中', el('button', { onclick: logout }, 'ログアウト'));
+  const nav = document.getElementById('nav');
+  nav.hidden = false;
+  nav.replaceChildren(...TABS.map(t => el('button', {
+    class: t.key === tab ? 'on' : '',
+    onclick: () => { tab = t.key; save('midori_admin_tab', tab); message(''); render(); }
+  }, t.label, t.key === 'pending' && data.pending.length ? el('span', { class: 'num' }, data.pending.length) : null)));
+  const view = document.getElementById('view');
+  const draw = { events: viewEvents, members: viewMembers, pending: viewPending, admins: viewAdmins }[tab] || viewEvents;
+  view.replaceChildren(...draw());
+}
+
+function memberOptions(exclude) {
+  return data.members.filter(m => m.status === '有効' && !exclude.includes(m.id))
+    .map(m => el('option', { value: m.id }, m.id + ' ' + m.nick));
+}
+
+function viewEvents() {
+  const upcoming = data.events.filter(e => e.date >= data.today);
+  const past = data.events.filter(e => e.date < data.today).reverse();
+  return [
+    ...(upcoming.length ? upcoming.map(eventCard) : [el('p', { class: 'sub' }, 'これからの開催日はありません。')]),
+    eventForm(),
+    past.length ? el('h2', { style: 'margin-top:24px' }, '過ぎた開催日（出席のチェック）') : null,
+    ...past.map(eventCard)
+  ];
+}
+
+function eventCard(ev) {
+  const isPast = ev.date < data.today;
+  const time = [ev.start && ev.end ? ev.start + '〜' + ev.end : ev.start, ev.place].filter(Boolean).join('　');
+  const capa = ev.capacity ? '　定員 ' + ev.capacity + '人' : '';
+  const list = el('ul', { class: 'people' }, ev.people.map(p => el('li', {},
+    el('span', { class: 'n' }, p.nick, p.proxy ? el('span', { class: 'badge soft' }, '代理') : null),
+    el('label', {}, el('input', { type: 'checkbox', checked: p.attended, onchange: e => act({ action: 'attend', date: ev.date, id: p.id, value: e.target.checked }) }), '出席'),
+    isPast ? null : el('button', { class: 'btn small warn', onclick: () => act({ action: 'proxy', date: ev.date, id: p.id, op: 'cancel' }, p.nick + ' さんの ' + ev.label + ' の参加を取り消しますか？') }, '取消')
+  )));
+  const sel = el('select', {}, el('option', { value: '' }, '会員を選ぶ'), memberOptions(ev.people.map(p => p.id)));
+  return el('div', { class: 'card' + (ev.canceled ? ' canceled' : '') + (isPast ? ' past' : '') },
+    el('p', { class: 'date' }, ev.label, ev.canceled ? el('span', { class: 'badge stop' }, '中止') : null),
+    el('p', { class: 'meta' }, time + capa),
+    ev.note ? el('p', { class: 'meta' }, ev.note) : null,
+    el('p', { class: 'meta' }, '参加 ' + ev.people.length + '人'),
+    ev.people.length ? list : null,
+    isPast || ev.canceled ? null : el('div', { class: 'row' }, sel,
+      el('button', { class: 'btn', onclick: () => {
+        if (!sel.value) { message('代理で申し込む会員を選んでください。', true); return; }
+        act({ action: 'proxy', date: ev.date, id: sel.value, op: 'join' });
+      } }, '代理で申し込む')),
+    isPast ? null : el('div', { class: 'row' },
+      el('button', { class: 'btn small', style: 'margin:0', onclick: () => fillEventForm(ev) }, '内容を直す'),
+      ev.canceled
+        ? el('button', { class: 'btn small', onclick: () => act({ action: 'cancelEvent', date: ev.date, value: false }, ev.label + ' の中止を取り消しますか？') }, '中止を取り消す')
+        : el('button', { class: 'btn small warn', onclick: () => act({ action: 'cancelEvent', date: ev.date, value: true }, ev.label + ' を中止にしますか？参加者サイトに「中止」と出ます。') }, '中止にする'))
+  );
+}
+
+function eventForm() {
+  const f = el('div', { class: 'card form', id: 'eventForm' },
+    el('h2', {}, '開催日を追加する'),
+    el('p', { class: 'sub', style: 'margin:0' }, '同じ日付を入れると、その日の内容を書き換えます。'),
+    el('div', { class: 'two' },
+      el('div', {}, el('label', {}, '日付'), el('input', { type: 'date', id: 'f_date' })),
+      el('div', {}, el('label', {}, '定員（なしは空欄）'), el('input', { type: 'number', id: 'f_capacity', min: '0' }))),
+    el('div', { class: 'two' },
+      el('div', {}, el('label', {}, '開始'), el('input', { type: 'time', id: 'f_start', value: '09:30' })),
+      el('div', {}, el('label', {}, '終了'), el('input', { type: 'time', id: 'f_end', value: '15:00' }))),
+    el('label', {}, '場所'), el('input', { type: 'text', id: 'f_place', value: lastPlace() }),
+    el('label', {}, '内容'), el('input', { type: 'text', id: 'f_note' }),
+    el('button', { class: 'btn main', style: 'margin-top:14px', onclick: () => {
+      const v = id => document.getElementById(id).value.trim();
+      if (!v('f_date')) { message('日付を入れてください。', true); return; }
+      act({ action: 'saveEvent', date: v('f_date'), start: v('f_start'), end: v('f_end'), place: v('f_place'), note: v('f_note'), capacity: v('f_capacity') });
+    } }, '保存する'));
+  return f;
+}
+
+function lastPlace() {
+  const e = data.events.filter(x => x.place).slice(-1)[0];
+  return e ? e.place : '';
+}
+
+function fillEventForm(ev) {
+  const set = (id, v) => { document.getElementById(id).value = v || ''; };
+  set('f_date', ev.date); set('f_start', ev.start); set('f_end', ev.end);
+  set('f_place', ev.place); set('f_note', ev.note); set('f_capacity', ev.capacity || '');
+  document.getElementById('eventForm').scrollIntoView({ behavior: 'smooth' });
+  message('下の欄を直して「保存する」を押してください。');
+}
+
+function viewMembers() {
+  const picked = new Set();
+  const rows = data.members.map(m => {
+    const off = m.status === '無効';
+    return el('tr', {},
+      el('td', {}, el('input', { type: 'checkbox', onchange: e => e.target.checked ? picked.add(m.id) : picked.delete(m.id), 'aria-label': m.nick + ' のカード' })),
+      el('td', {}, el('strong', {}, m.nick), off ? el('span', { class: 'badge off' }, '無効') : null,
+        el('div', { class: 'sub' }, m.id + '　' + m.name)),
+      el('td', { class: 'num hide-sp' }, m.count + '回'),
+      el('td', { class: 'hide-sp sub' }, m.issued),
+      el('td', {},
+        el('button', { class: 'btn small', onclick: () => act({ action: 'reissue', id: m.id },
+          m.nick + ' さんのリンクを作り直して、メールで送りますか？今のリンクは使えなくなります。') }, '再発行'),
+        off
+          ? el('button', { class: 'btn small', onclick: () => act({ action: 'setStatus', id: m.id, status: '有効' }, m.nick + ' さんを有効に戻しますか？前と同じリンクがまた使えるようになります。') }, '有効に戻す')
+          : el('button', { class: 'btn small warn', onclick: () => act({ action: 'setStatus', id: m.id, status: '無効' }, m.nick + ' さんを無効にしますか？リンクが使えなくなり、これからの申し込みも取り消されます。') }, '無効にする'))
+    );
+  });
+  return [
+    el('div', { class: 'card' },
+      el('h2', {}, '会員（' + data.members.filter(m => m.status === '有効').length + '人）'),
+      data.members.length ? el('table', {},
+        el('thead', {}, el('tr', {}, el('th', {}, 'カード'), el('th', {}, '名前'), el('th', { class: 'hide-sp' }, '出席'), el('th', { class: 'hide-sp' }, 'リンク発行'), el('th', {}, ''))),
+        el('tbody', {}, rows)) : el('p', { class: 'sub' }, 'まだ会員がいません。'),
+      el('button', { class: 'btn main', style: 'margin-top:14px', onclick: () => {
+        if (picked.size === 0) { message('カードを作る人の「カード」にチェックを入れてください。', true); return; }
+        act({ action: 'makeCard', ids: [...picked] });
+      } }, 'チェックした人のQRカードを作る'),
+      el('p', { class: 'sub' }, 'カードは印刷用のGoogleドキュメントで、新しいタブで開きます。'))
+  ];
+}
+
+function viewPending() {
+  if (!data.pending.length) return [el('p', { class: 'sub' }, '承認を待っている登録はありません。')];
+  return data.pending.map(p => el('div', { class: 'card' },
+    el('p', { class: 'date' }, p.nick),
+    el('p', { class: 'meta' }, p.name + '　' + p.email),
+    el('p', { class: 'meta' }, p.date + ' 登録'),
+    p.note ? el('p', { class: 'meta', style: 'color:var(--warn)' }, p.note) : null,
+    el('button', { class: 'btn main', onclick: () => act({ action: 'approve', row: p.row },
+      p.nick + ' さんを承認して、参加用のリンクをメールで送りますか？') }, '承認してリンクを送る'),
+    el('p', { class: 'sub' }, '住所や電話番号は、名簿のスプレッドシートで確認できます。')
+  ));
+}
+
+function viewAdmins() {
+  const input = el('input', { type: 'email', placeholder: 'example@gmail.com', style: 'flex:1;min-width:200px' });
+  return [el('div', { class: 'card' },
+    el('h2', {}, '管理者'),
+    el('ul', { class: 'people' }, data.admins.map(a => el('li', {},
+      el('span', { class: 'n' }, a), a === data.me ? el('span', { class: 'sub' }, '（自分）')
+        : el('button', { class: 'btn small warn', onclick: () => act({ action: 'removeAdmin', email: a }, a + ' を管理者から外しますか？') }, '外す')))),
+    el('div', { class: 'row' }, input,
+      el('button', { class: 'btn main', style: 'margin:0', onclick: () => act({ action: 'addAdmin', email: input.value.trim() }) }, '管理者に足す')),
+    el('p', { class: 'sub' }, '足した人は、そのGoogleアカウントでこのページにログインできるようになります。'))];
+}
+
+// ---------- はじめ ----------
+
+if (session) refresh(); else showLogin();
+</script>
+</body>
+</html>
