@@ -103,6 +103,14 @@
   .picker .hint { flex-basis: 100%; margin: 4px 0 0; font-size: 13px; opacity: .9; }
   .sp-icon { width: 1.3em; height: 1.3em; border-radius: 50%; object-fit: cover; vertical-align: -0.25em; }
   .count { font-size: 13px; opacity: .85; }
+  .join-card { border: 2px solid var(--green); }
+  .join-card h2 { margin: 0 0 6px; font-size: 19px; }
+  .join-card p { margin: 0; font-size: 16px; }
+  .join-card .sub { margin-top: 8px; color: var(--sub); font-size: 14px; }
+  a.btn-link {
+    display: block; margin-top: 14px; padding: 14px; text-align: center; text-decoration: none;
+    font-size: 19px; font-weight: 700; border-radius: 12px; background: var(--green); color: #fff;
+  }
   footer { text-align: center; color: var(--sub); font-size: 13px; padding: 8px 16px 32px; }
 </style>
 </head>
@@ -132,6 +140,7 @@
     '🏆', '👑', '🌟', '🎖️', '🐉'
   ];
   const SPECIAL = 'S';
+  const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeCcaE20H7CnhOoDyjMcLzeaV9r6P7noj4jPy6vACUUYGpi7Q/viewform';
   const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
   const ERRORS = {
     invalid_link: 'このリンクは使えません。運営の人に新しいリンクをもらってください。',
@@ -188,12 +197,18 @@
     return span;
   }
 
-  function render(data) {
-    renderHello(data.me);
+  // 専用リンクがあれば申し込める画面、なければ見るだけの予定表（isPublic）
+  function render(data, isPublic) {
     const box = document.getElementById('events');
     box.textContent = '';
+    if (isPublic) {
+      document.getElementById('hello').textContent = '開催日と、参加予定の人のニックネームを見られます。';
+      box.appendChild(joinCard());
+    } else {
+      renderHello(data.me);
+    }
     if (data.events.length === 0) {
-      box.innerHTML = '<div class="msg">いま受付中の開催日はありません。</div>';
+      box.insertAdjacentHTML('beforeend', '<div class="msg">いま受付中の開催日はありません。</div>');
       return;
     }
     data.events.forEach(ev => {
@@ -244,7 +259,7 @@
         card.appendChild(p);
       }
 
-      if (!ev.canceled) {
+      if (!ev.canceled && !isPublic) {
         const full = ev.capacity && ev.people.length >= ev.capacity && !ev.joined;
         const btn = document.createElement('button');
         if (ev.joined) {
@@ -263,6 +278,27 @@
       }
       box.appendChild(card);
     });
+  }
+
+  // 登録していない人向けの案内と、会員登録フォームへのボタン
+  function joinCard() {
+    const card = document.createElement('section');
+    card.className = 'card join-card';
+    const h = document.createElement('h2');
+    h.textContent = '参加してみませんか';
+    const p = document.createElement('p');
+    p.textContent = '参加の申し込みは、会員登録をすると届く専用リンクから行います。';
+    const a = document.createElement('a');
+    a.className = 'btn-link';
+    a.href = FORM_URL;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = '会員登録をする';
+    const sub = document.createElement('p');
+    sub.className = 'sub';
+    sub.textContent = '登録フォームが開きます。運営が確認したあと、専用リンクをメールでお送りします。';
+    card.append(h, p, a, sub);
+    return card;
   }
 
   function renderHello(me) {
@@ -343,8 +379,14 @@
 
   async function load() {
     if (!token) {
-      document.getElementById('hello').textContent = '';
-      showMessage('このページは、配られた専用リンクかQRコードから開いてください。', true);
+      try {
+        const data = await call({ action: 'public' });
+        if (!data.ok) { document.getElementById('hello').textContent = ''; showMessage(ERRORS.bad_request, true); return; }
+        render(data, true);
+      } catch (e) {
+        document.getElementById('hello').textContent = '';
+        showMessage('通信できませんでした。電波の良いところで開き直してください。', true);
+      }
       return;
     }
     try {
