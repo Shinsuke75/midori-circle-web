@@ -285,6 +285,8 @@ function eventCard(ev) {
     ev.note ? el('p', { class: 'meta' }, ev.note) : null,
     el('p', { class: 'meta' }, '参加 ' + ev.people.length + '人'),
     ev.people.length ? list : null,
+    ev.waiting && ev.waiting.length ? el('p', { class: 'meta' }, 'キャンセル待ち（早い順）：' +
+      ev.waiting.map(w => w.nick + (w.until ? '（連絡済み・' + w.until + 'まで返事待ち）' : '')).join('、')) : null,
     isPast || ev.canceled ? null : el('div', { class: 'row' }, sel,
       el('button', { class: 'btn', onclick: () => {
         if (!sel.value) { message('代理で申し込む会員を選んでください。', true); return; }

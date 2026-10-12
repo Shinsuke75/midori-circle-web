@@ -75,6 +75,11 @@
   }
   .badge.ok { background: var(--green); color: #fff; }
   .badge.stop { background: var(--warn); color: #fff; }
+  .badge.wait { background: #f3e6c8; color: #6b4e12; }
+  .card.offered { border: 2px solid #c99a2e; }
+  .offer-box { margin: 12px 0 0; padding: 10px 12px; border-radius: 10px; background: #fbf3df; font-size: 16px; }
+  .wait-rule { margin: 12px 0 0; color: var(--sub); font-size: 14px; }
+  .people.waiting li { opacity: .75; }
   button {
     display: block;
     width: 100%;
@@ -155,9 +160,13 @@
   const SPECIAL = 'S';
   const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeCcaE20H7CnhOoDyjMcLzeaV9r6P7noj4jPy6vACUUYGpi7Q/viewform';
   const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
+  const WAIT_HOW = '空きが出たら、早く登録した人から順にメールでお知らせします。メールが届いたら、6時間のうちに参加のページで「参加する」か「参加しない」を選んでください。6時間たって返事がない場合は、次の人に移ります。お知らせは開催日の前日18時までです。';
+  const WAIT_RULE = '定員に達した日は、キャンセル待ちに登録できます。' + WAIT_HOW;
   const ERRORS = {
     invalid_link: 'このリンクは使えません。運営の人に新しいリンクをもらってください。',
-    full: '定員に達したため、参加できませんでした。',
+    full: '定員に達したため、参加できませんでした。キャンセル待ちに登録できます。',
+    not_full: '空きがあるので、そのまま申し込めます。',
+    wait_closed: 'キャンセル待ちの受付は、開催日の前日18時で終わりました。',
     canceled: 'この日は中止になりました。',
     past: 'この日はもう終わっています。',
     no_event: 'この日の予定が見つかりません。',
@@ -225,6 +234,7 @@
       ['時間', '10:00〜16:30。工作室は9時から開錠しますが、10時をめどにお集まりください。途中の早退も自由です。'],
       ['参加費', '1,500円（会場借用料、傷害保険料含む）。当日、現地で現金またはPayPayでお支払いください。'],
       ['キャンセル', 'なるべく早くお知らせください。急病などのやむを得ない場合を除き、当日のキャンセルは全額のお支払いをお願いいたします。'],
+      ['キャンセル待ち', WAIT_RULE],
       ['場所', 'あいち海上の森センター 工作室（愛知県瀬戸市吉野町304-1）']
     ];
     items.forEach(([t, body]) => {
@@ -256,13 +266,15 @@
     }
     data.events.forEach(ev => {
       const card = document.createElement('section');
-      card.className = 'card' + (ev.joined ? ' joined' : '') + (ev.canceled ? ' canceled' : '');
+      card.className = 'card' + (ev.joined ? ' joined' : '') + (ev.myState === 'offered' ? ' offered' : '') + (ev.canceled ? ' canceled' : '');
 
       const h = document.createElement('p');
       h.className = 'date';
       h.textContent = dateLabel(ev.date);
       if (ev.canceled) h.insertAdjacentHTML('beforeend', '<span class="badge stop">中止</span>');
       else if (ev.joined) h.insertAdjacentHTML('beforeend', '<span class="badge ok">参加予定</span>');
+      else if (ev.myState === 'offered') h.insertAdjacentHTML('beforeend', '<span class="badge wait">順番が来ました</span>');
+      else if (ev.myState === 'waiting') h.insertAdjacentHTML('beforeend', '<span class="badge wait">キャンセル待ち ' + ev.myRank + '番目</span>');
       card.appendChild(h);
 
       const time = [ev.start, ev.end].filter(Boolean).join('〜');
@@ -302,45 +314,109 @@
         card.appendChild(p);
       }
 
-      if (ev.joined && ev.myNote) {
+      if (ev.waiting && ev.waiting.length) {
+        const wh = document.createElement('p');
+        wh.className = 'people-head';
+        wh.textContent = 'キャンセル待ち ' + ev.waiting.length + '人（登録の早い順）';
+        const ul = document.createElement('ul');
+        ul.className = 'people waiting';
+        ev.waiting.forEach(pp => {
+          const li = document.createElement('li');
+          li.append(iconNode(pp.icon, pp.special), ' ' + pp.nick);
+          ul.appendChild(li);
+        });
+        card.append(wh, ul);
+      }
+
+      if (ev.myState && ev.myNote) {
         const p = document.createElement('p');
         p.className = 'my-note';
         p.textContent = '運営へのひとこと：' + ev.myNote;
         card.appendChild(p);
       }
 
-      if (!ev.canceled && !isPublic) {
-        const full = ev.capacity && ev.people.length >= ev.capacity && !ev.joined;
-        const btn = document.createElement('button');
-        if (ev.joined) {
-          btn.className = 'cancel';
-          btn.textContent = '参加をやめる';
-          btn.onclick = () => {
-            const msg = dateLabel(ev.date) + 'の参加をやめますか？\n\n急病などのやむを得ない場合を除き、当日のキャンセルは参加費の全額をお支払いいただきます。';
-            if (confirm(msg)) send('cancel', ev.date, btn);
-          };
-        } else {
-          btn.className = 'join';
-          btn.textContent = full ? '定員に達しました' : '参加する';
-          btn.disabled = !!full;
-          let note = null;
-          if (!full) {
-            const label = document.createElement('label');
-            label.className = 'note-label';
-            label.textContent = '運営へのひとこと（なくてもかまいません）';
-            note = document.createElement('textarea');
-            note.className = 'note-input';
-            note.maxLength = 300;
-            note.placeholder = '作りたいもの、要望があればご記入ください';
-            label.htmlFor = note.id = 'note-' + ev.date;
-            card.append(label, note);
-          }
-          btn.onclick = () => send('join', ev.date, btn, note ? note.value : '');
-        }
-        card.appendChild(btn);
-      }
+      if (!ev.canceled && !isPublic) addButtons(card, ev);
       box.appendChild(card);
     });
+  }
+
+  // 申し込み・取り消し・キャンセル待ちのボタン
+  function addButtons(card, ev) {
+    const button = (cls, text, onclick) => {
+      const b = document.createElement('button');
+      b.className = cls;
+      b.textContent = text;
+      b.onclick = () => onclick(b);
+      card.appendChild(b);
+      return b;
+    };
+    const noteBox = () => {
+      const label = document.createElement('label');
+      label.className = 'note-label';
+      label.textContent = '運営へのひとこと（なくてもかまいません）';
+      const note = document.createElement('textarea');
+      note.className = 'note-input';
+      note.maxLength = 300;
+      note.placeholder = '作りたいもの、要望があればご記入ください';
+      label.htmlFor = note.id = 'note-' + ev.date;
+      card.append(label, note);
+      return note;
+    };
+
+    if (ev.myState === 'joined') {
+      button('cancel', '参加をやめる', b => {
+        const msg = dateLabel(ev.date) + 'の参加をやめますか？\n\n急病などのやむを得ない場合を除き、当日のキャンセルは参加費の全額をお支払いいただきます。';
+        if (confirm(msg)) send('cancel', ev.date, b);
+      });
+      return;
+    }
+
+    if (ev.myState === 'offered') {
+      const p = document.createElement('p');
+      p.className = 'offer-box';
+      p.textContent = '空きが出ました。' + ev.offerUntil + ' までに、参加するかどうかを選んでください。返事がない場合は、次の人に移ります。';
+      card.appendChild(p);
+      button('join', '参加する', b => send('join', ev.date, b));
+      button('cancel', '参加しない', b => {
+        if (confirm(dateLabel(ev.date) + 'に参加しないで、次の人に順番を回しますか？')) send('decline', ev.date, b);
+      });
+      return;
+    }
+
+    if (ev.myState === 'waiting') {
+      const p = document.createElement('p');
+      p.className = 'wait-rule';
+      p.textContent = ev.waitClosed
+        ? 'キャンセル待ちのお知らせは、前日18時で終わりました。'
+        : 'キャンセル待ちの ' + ev.myRank + '番目です。空きが出たらメールでお知らせします。メールから6時間たって返事がない場合は、次の人に移ります。';
+      card.appendChild(p);
+      if (ev.canJoin) button('join', '参加する', b => send('join', ev.date, b));
+      button('cancel', 'キャンセル待ちをやめる', b => {
+        if (confirm(dateLabel(ev.date) + 'のキャンセル待ちをやめますか？')) send('decline', ev.date, b);
+      });
+      return;
+    }
+
+    if (ev.canJoin) {
+      const note = noteBox();
+      button('join', '参加する', b => send('join', ev.date, b, note.value));
+      return;
+    }
+
+    if (ev.canWait) {
+      const p = document.createElement('p');
+      p.className = 'wait-rule';
+      p.textContent = '定員に達しています。' + WAIT_HOW;
+      card.appendChild(p);
+      const note = noteBox();
+      button('join', 'キャンセル待ちに登録する', b => {
+        if (confirm(dateLabel(ev.date) + 'のキャンセル待ちに登録しますか？\n\n空きが出たらメールでお知らせします。6時間たって返事がない場合は、次の人に移ります。')) send('wait', ev.date, b, note.value);
+      });
+      return;
+    }
+
+    const b = button('join', '定員に達しました', () => {});
+    b.disabled = true;
   }
 
   // 登録していない人向けの案内と、会員登録フォームへのボタン
@@ -431,7 +507,13 @@
         load();
         return;
       }
-      showMessage(action === 'join' ? dateLabel(date) + 'に参加を受け付けました。' : dateLabel(date) + 'の参加をやめました。');
+      const done = {
+        join: 'に参加を受け付けました。',
+        cancel: 'の参加をやめました。',
+        wait: 'のキャンセル待ちに登録しました。',
+        decline: 'のキャンセル待ちをやめました。'
+      };
+      showMessage(dateLabel(date) + done[action]);
       render(data);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e) {
