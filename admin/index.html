@@ -62,7 +62,8 @@
     font-family: inherit; font-size: 16px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink);
   }
   .form label { display: block; margin-top: 10px; font-size: 14px; color: var(--sub); }
-  .form input { width: 100%; }
+  .form input, .form select, .form textarea { width: 100%; }
+  textarea { font-family: inherit; font-size: 16px; line-height: 1.6; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); resize: vertical; }
   .form .two { display: flex; gap: 10px; }
   .form .two > div { flex: 1; }
   table { width: 100%; border-collapse: collapse; font-size: 15px; }
@@ -99,8 +100,11 @@ const TABS = [
   { key: 'events', label: '開催日' },
   { key: 'members', label: '会員' },
   { key: 'pending', label: '新しい登録' },
+  { key: 'mail', label: 'メール' },
   { key: 'admins', label: '管理者' }
 ];
+// メールの書きかけ。送るのに失敗して画面を描き直しても消えないようにする
+const drafts = { date: '', evSubject: '明日はみどりの工作室、サークル活動日です。', evBody: '', allSubject: '', allBody: '' };
 let session = load('midori_admin_session');
 let tab = load('midori_admin_tab') || 'events';
 let data = null;
@@ -220,6 +224,7 @@ async function act(body, confirmText) {
     render();
     message(r.msg || '');
     if (r.url) window.open(r.url, '_blank', 'noopener');
+    return true;
   } catch (e) {
     message('通信できませんでした。電波のよいところで、もう一度お試しください。', true);
   } finally {
@@ -239,7 +244,7 @@ function render() {
     onclick: () => { tab = t.key; save('midori_admin_tab', tab); message(''); render(); }
   }, t.label, t.key === 'pending' && data.pending.length ? el('span', { class: 'num' }, data.pending.length) : null)));
   const view = document.getElementById('view');
-  const draw = { events: viewEvents, members: viewMembers, pending: viewPending, admins: viewAdmins }[tab] || viewEvents;
+  const draw = { events: viewEvents, members: viewMembers, pending: viewPending, mail: viewMail, admins: viewAdmins }[tab] || viewEvents;
   view.replaceChildren(...draw().filter(c => c != null && c !== false));
 }
 
@@ -364,6 +369,44 @@ function viewPending() {
       p.nick + ' さんを承認して、参加用のリンクをメールで送りますか？') }, '承認してリンクを送る'),
     el('p', { class: 'sub' }, '住所や電話番号は、名簿のスプレッドシートで確認できます。')
   ));
+}
+
+function viewMail() {
+  const upcoming = data.events.filter(e => e.date >= data.today && !e.canceled);
+  if (!upcoming.some(e => e.date === drafts.date)) drafts.date = upcoming.length ? upcoming[0].date : '';
+  const field = (key, attrs) => el(attrs.rows ? 'textarea' : 'input', Object.assign({ oninput: e => { drafts[key] = e.target.value; } }, attrs), attrs.rows ? drafts[key] : null);
+  const active = data.members.filter(m => m.status === '有効').length;
+
+  const evSel = el('select', { onchange: e => { drafts.date = e.target.value; render(); } },
+    upcoming.map(e => el('option', { value: e.date, selected: e.date === drafts.date }, e.label + '（参加 ' + e.people.length + '人）')));
+  const ev = upcoming.find(e => e.date === drafts.date);
+
+  return [
+    el('div', { class: 'card form' },
+      el('h2', {}, '開催日の参加者に送る'),
+      el('p', { class: 'sub', style: 'margin:0' }, '前日のお知らせなどに使います。選んだ日に申し込んでいる人だけに届きます。'),
+      upcoming.length ? [
+        el('label', {}, '開催日'), evSel,
+        el('label', {}, '件名'), field('evSubject', { type: 'text', value: drafts.evSubject }),
+        el('label', {}, '本文'), field('evBody', { rows: 10 }),
+        el('button', { class: 'btn main', style: 'margin-top:14px', onclick: async () => {
+          if (!ev || ev.people.length === 0) { message('その日に申し込んでいる人がいません。', true); return; }
+          const ok = await act({ action: 'mailEvent', date: ev.date, subject: drafts.evSubject, body: drafts.evBody },
+            ev.label + ' の参加者 ' + ev.people.length + '人にメールを送りますか？');
+          if (ok) { drafts.evBody = ''; render(); }
+        } }, '参加者に送る')
+      ] : el('p', { class: 'sub' }, 'これからの開催日がありません。')),
+    el('div', { class: 'card form' },
+      el('h2', {}, '会員全員に送る'),
+      el('p', { class: 'sub', style: 'margin:0' }, '有効な会員 ' + active + '人に届きます。無効の人には届きません。'),
+      el('label', {}, '件名'), field('allSubject', { type: 'text', value: drafts.allSubject }),
+      el('label', {}, '本文'), field('allBody', { rows: 10 }),
+      el('button', { class: 'btn main', style: 'margin-top:14px', onclick: async () => {
+        const ok = await act({ action: 'mailAll', subject: drafts.allSubject, body: drafts.allBody }, '有効な会員 ' + active + '人にメールを送りますか？');
+        if (ok) { drafts.allSubject = ''; drafts.allBody = ''; render(); }
+      } }, '全員に送る')),
+    el('p', { class: 'sub' }, 'メールは1人ずつ別々に届くので、ほかの人のアドレスは見えません。差出人は「みどりの工作室」です。申し込み・取り消しの確認メールは自動で届くので、ここで送る必要はありません。')
+  ];
 }
 
 function viewAdmins() {
