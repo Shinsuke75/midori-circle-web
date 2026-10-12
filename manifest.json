@@ -1,0 +1,19 @@
+{
+  "name": "みどりの工作室 サークル活動",
+  "short_name": "みどりサークル",
+  "display": "browser",
+  "background_color": "#f6f4ee",
+  "theme_color": "#3f6b3a",
+  "icons": [
+    {
+      "src": "icons/app/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/app/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

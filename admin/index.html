@@ -6,6 +6,10 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <title>みどりの工作室 サークル活動 管理</title>
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-title" content="みどり管理">
 <script src="https://accounts.google.com/gsi/client" async></script>
 <style>
   :root {
@@ -300,23 +304,18 @@ function eventForm() {
     el('p', { class: 'sub', style: 'margin:0' }, '同じ日付を入れると、その日の内容を書き換えます。'),
     el('div', { class: 'two' },
       el('div', {}, el('label', {}, '日付'), el('input', { type: 'date', id: 'f_date' })),
-      el('div', {}, el('label', {}, '定員（なしは空欄）'), el('input', { type: 'number', id: 'f_capacity', min: '0' }))),
+      el('div', {}, el('label', {}, '定員（なしは空欄）'), el('input', { type: 'number', id: 'f_capacity', min: '0', value: '12' }))),
     el('div', { class: 'two' },
       el('div', {}, el('label', {}, '開始'), el('input', { type: 'time', id: 'f_start', value: '10:00' })),
       el('div', {}, el('label', {}, '終了'), el('input', { type: 'time', id: 'f_end', value: '16:30' }))),
-    el('label', {}, '場所'), el('input', { type: 'text', id: 'f_place', value: lastPlace() }),
-    el('label', {}, '内容'), el('input', { type: 'text', id: 'f_note' }),
+    el('label', {}, '場所'), el('input', { type: 'text', id: 'f_place', value: 'あいち海上の森センター 工作室' }),
+    el('label', {}, '内容'), el('input', { type: 'text', id: 'f_note', value: 'みどりの工作室 サークル活動' }),
     el('button', { class: 'btn main', style: 'margin-top:14px', onclick: () => {
       const v = id => document.getElementById(id).value.trim();
       if (!v('f_date')) { message('日付を入れてください。', true); return; }
       act({ action: 'saveEvent', date: v('f_date'), start: v('f_start'), end: v('f_end'), place: v('f_place'), note: v('f_note'), capacity: v('f_capacity') });
     } }, '保存する'));
   return f;
-}
-
-function lastPlace() {
-  const e = data.events.filter(x => x.place).slice(-1)[0];
-  return e ? e.place : '';
 }
 
 function fillEventForm(ev) {
