@@ -99,6 +99,10 @@
     background: #fff; border: 2px solid transparent; border-radius: 12px;
   }
   .picker button.current { border-color: #cfe0cb; }
+  .picker button img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+  .picker .hint { flex-basis: 100%; margin: 4px 0 0; font-size: 13px; opacity: .9; }
+  .sp-icon { width: 1.3em; height: 1.3em; border-radius: 50%; object-fit: cover; vertical-align: -0.25em; }
+  .count { font-size: 13px; opacity: .85; }
   footer { text-align: center; color: var(--sub); font-size: 13px; padding: 8px 16px 32px; }
 </style>
 </head>
@@ -121,8 +125,13 @@
   const ICONS = [
     '🌲', '🪵', '🍄', '🐿️', '🦉', '🌰', '🍃', '🐦', '🦔', '🌻',
     '🌳', '🍁', '🍂', '🌿', '🍀', '🌱', '🌸', '🌾', '🦫', '🦊',
-    '🐻', '🦌', '🐗', '🐇', '🐸', '🐢', '🦋', '🐞', '🐝', '🪓'
+    '🐻', '🦌', '🐗', '🐇', '🐸', '🐢', '🦋', '🐞', '🐝', '🪓',
+    // 参加10回で選べる
+    '🥄', '🪑', '🪚', '🔨', '🧺',
+    // 参加30回で選べる
+    '🏆', '👑', '🌟', '🎖️', '🐉'
   ];
+  const SPECIAL = 'S';
   const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
   const ERRORS = {
     invalid_link: 'このリンクは使えません。運営の人に新しいリンクをもらってください。',
@@ -164,6 +173,20 @@
   }
 
   function icon(n) { return ICONS[(n - 1) % ICONS.length] || ICONS[0]; }
+
+  // 絵柄（文字）か、特別アイコン（画像）を返す
+  function iconNode(n, special) {
+    if (n === SPECIAL && special) {
+      const img = document.createElement('img');
+      img.className = 'sp-icon';
+      img.src = 'icons/' + special;
+      img.alt = '';
+      return img;
+    }
+    const span = document.createElement('span');
+    span.textContent = icon(n);
+    return span;
+  }
 
   function render(data) {
     renderHello(data.me);
@@ -209,7 +232,7 @@
         ul.className = 'people';
         ev.people.forEach(pp => {
           const li = document.createElement('li');
-          li.textContent = icon(pp.icon) + ' ' + pp.nick;
+          li.append(iconNode(pp.icon, pp.special), ' ' + pp.nick);
           if (ev.joined && pp.nick === data.me.nick && pp.icon === data.me.icon) li.className = 'me';
           ul.appendChild(li);
         });
@@ -246,25 +269,41 @@
     const hello = document.getElementById('hello');
     hello.textContent = '';
     const name = document.createElement('span');
-    name.textContent = icon(me.icon) + ' ' + me.nick + ' さん';
+    name.append(iconNode(me.icon, me.special), ' ' + me.nick + ' さん');
+    const count = document.createElement('span');
+    count.className = 'count';
+    count.textContent = '参加 ' + me.count + '回';
     const btn = document.createElement('button');
     btn.className = 'icon-btn';
     btn.textContent = 'アイコンを変える';
-    btn.onclick = () => togglePicker(me.icon);
-    hello.append(name, btn);
+    btn.onclick = () => togglePicker(me);
+    hello.append(name, count, btn);
   }
 
-  function togglePicker(current) {
+  function togglePicker(me) {
     const box = document.getElementById('picker');
     if (!box.hidden) { box.hidden = true; return; }
     box.textContent = '';
-    ICONS.forEach((ic, i) => {
+    if (me.special) {
+      const b = document.createElement('button');
+      b.appendChild(iconNode(SPECIAL, me.special));
+      if (me.icon === SPECIAL) b.className = 'current';
+      b.onclick = () => changeIcon(SPECIAL);
+      box.appendChild(b);
+    }
+    ICONS.slice(0, me.maxIcon).forEach((ic, i) => {
       const b = document.createElement('button');
       b.textContent = ic;
-      if (i + 1 === current) b.className = 'current';
+      if (i + 1 === me.icon) b.className = 'current';
       b.onclick = () => changeIcon(i + 1);
       box.appendChild(b);
     });
+    if (me.nextStep > 0) {
+      const p = document.createElement('p');
+      p.className = 'hint';
+      p.textContent = 'あと' + me.nextStep + '回の参加で、選べる絵柄が増えます。';
+      box.appendChild(p);
+    }
     box.hidden = false;
   }
 
