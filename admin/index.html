@@ -31,6 +31,8 @@
   nav .num { display: inline-block; min-width: 20px; padding: 0 6px; margin-left: 4px; border-radius: 999px;
     background: var(--warn); color: #fff; font-size: 12px; }
   main { max-width: 720px; margin: 0 auto; padding: 16px; }
+  .spinner { width: 36px; height: 36px; margin: 8px auto 12px; border: 4px solid #d9e3d3; border-top-color: var(--green); border-radius: 50%; animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
   .msg { padding: 12px 16px; border-radius: 10px; background: var(--card); border: 1px solid var(--green); margin-bottom: 16px; }
   .msg.err { border-color: var(--warn); color: var(--warn); }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
@@ -135,6 +137,14 @@ async function call(body) {
 
 // ---------- ログイン ----------
 
+function showLoading(text) {
+  document.getElementById('view').replaceChildren(el('div', { class: 'card center' },
+    el('div', { class: 'spinner' }),
+    el('p', {}, text),
+    el('p', { class: 'sub' }, '10秒ほどかかることがあります。そのままお待ちください。')
+  ));
+}
+
 function showLogin(note) {
   document.getElementById('nav').hidden = true;
   document.getElementById('who').textContent = '';
@@ -153,10 +163,12 @@ function showLogin(note) {
 }
 
 async function onCredential(resp) {
-  message('確認しています…');
+  message('');
+  showLoading('ログインしています…');
   try {
     const r = await call({ action: 'login', idToken: resp.credential });
     if (!r.ok) {
+      showLogin();
       message(r.error === 'not_admin' ? r.email + ' は管理者として登録されていません。' : 'ログインできませんでした。もう一度お試しください。', true);
       return;
     }
@@ -165,6 +177,7 @@ async function onCredential(resp) {
     message('');
     await refresh();
   } catch (e) {
+    showLogin();
     message('通信できませんでした。電波のよいところで、もう一度お試しください。', true);
   }
 }
@@ -186,6 +199,7 @@ async function refresh() {
     data = r;
     render();
   } catch (e) {
+    if (!data) showLogin();
     message('通信できませんでした。電波のよいところで、もう一度お試しください。', true);
   }
 }
@@ -366,7 +380,7 @@ function viewAdmins() {
 
 // ---------- はじめ ----------
 
-if (session) refresh(); else showLogin();
+if (session) { showLoading('読み込んでいます…'); refresh(); } else showLogin();
 </script>
 </body>
 </html>
