@@ -269,7 +269,8 @@ function eventCard(ev) {
   const time = [ev.start && ev.end ? ev.start + '〜' + ev.end : ev.start, ev.place].filter(Boolean).join('　');
   const capa = ev.capacity ? '　定員 ' + ev.capacity + '人' : '';
   const list = el('ul', { class: 'people' }, ev.people.map(p => el('li', {},
-    el('span', { class: 'n' }, p.nick, p.proxy ? el('span', { class: 'badge soft' }, '代理') : null),
+    el('span', { class: 'n' }, p.nick, p.proxy ? el('span', { class: 'badge soft' }, '代理') : null,
+      p.note ? el('div', { class: 'sub', style: 'white-space:pre-wrap' }, '「' + p.note + '」') : null),
     el('label', {}, el('input', { type: 'checkbox', checked: p.attended, onchange: e => act({ action: 'attend', date: ev.date, id: p.id, value: e.target.checked }) }), '出席'),
     isPast ? null : el('button', { class: 'btn small warn', onclick: () => act({ action: 'proxy', date: ev.date, id: p.id, op: 'cancel' }, p.nick + ' さんの ' + ev.label + ' の参加を取り消しますか？') }, '取消')
   )));
@@ -301,8 +302,8 @@ function eventForm() {
       el('div', {}, el('label', {}, '日付'), el('input', { type: 'date', id: 'f_date' })),
       el('div', {}, el('label', {}, '定員（なしは空欄）'), el('input', { type: 'number', id: 'f_capacity', min: '0' }))),
     el('div', { class: 'two' },
-      el('div', {}, el('label', {}, '開始'), el('input', { type: 'time', id: 'f_start', value: '09:30' })),
-      el('div', {}, el('label', {}, '終了'), el('input', { type: 'time', id: 'f_end', value: '15:00' }))),
+      el('div', {}, el('label', {}, '開始'), el('input', { type: 'time', id: 'f_start', value: '10:00' })),
+      el('div', {}, el('label', {}, '終了'), el('input', { type: 'time', id: 'f_end', value: '16:30' }))),
     el('label', {}, '場所'), el('input', { type: 'text', id: 'f_place', value: lastPlace() }),
     el('label', {}, '内容'), el('input', { type: 'text', id: 'f_note' }),
     el('button', { class: 'btn main', style: 'margin-top:14px', onclick: () => {

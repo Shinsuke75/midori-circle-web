@@ -103,6 +103,15 @@
   .picker .hint { flex-basis: 100%; margin: 4px 0 0; font-size: 13px; opacity: .9; }
   .sp-icon { width: 1.3em; height: 1.3em; border-radius: 50%; object-fit: cover; vertical-align: -0.25em; }
   .count { font-size: 13px; opacity: .85; }
+  .note-label { display: block; margin: 14px 0 4px; font-size: 15px; color: var(--sub); }
+  textarea.note-input {
+    display: block; width: 100%; min-height: 64px; padding: 8px 10px; font-family: inherit; font-size: 16px;
+    line-height: 1.5; border: 1px solid var(--line); border-radius: 10px; resize: vertical; background: #fff; color: var(--ink);
+  }
+  .my-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: var(--green-soft); font-size: 15px; white-space: pre-wrap; }
+  .about summary { cursor: pointer; font-weight: 700; font-size: 17px; }
+  .about h3 { margin: 14px 0 2px; font-size: 16px; }
+  .about p { margin: 0; font-size: 16px; }
   .join-card { border: 2px solid var(--green); }
   .join-card h2 { margin: 0 0 6px; font-size: 19px; }
   .join-card p { margin: 0; font-size: 16px; }
@@ -197,6 +206,34 @@
     return span;
   }
 
+  // 活動の説明（Peatixの案内と同じ内容）。登録前の人には開いた状態で、会員には閉じた状態で出す
+  function aboutCard(open) {
+    const card = document.createElement('section');
+    card.className = 'card about';
+    const d = document.createElement('details');
+    d.open = !!open;
+    const sum = document.createElement('summary');
+    sum.textContent = '活動について（参加費・持ち物・キャンセル）';
+    d.appendChild(sum);
+    const items = [
+      ['どんな活動？', 'グリーンウッドワークを楽しむサークル活動です。先生はいませんが、経験者が教え手となり作り方を伝えたり、みんなで作り方を考えたり。それぞれが作りたいものを自由に作る、そんな活動を目指しています。'],
+      ['材料と道具', '材料は、あいち海上の森から出てくる、風倒木・支障木・間伐材などの生木が使えます。工作室には、作業台と多少の工具、ナイフ・斧はありますが、基本的には自分の道具は自分でご用意ください。'],
+      ['時間', '10:00〜16:30。工作室は9時から開錠しますが、10時をめどにお集まりください。途中の早退も自由です。'],
+      ['参加費', '1,500円（会場借用料、傷害保険料含む）。当日、現地で現金またはPayPayでお支払いください。'],
+      ['キャンセル', 'なるべく早くお知らせください。急病などのやむを得ない場合を除き、当日のキャンセルは全額のお支払いをお願いいたします。'],
+      ['場所', 'あいち海上の森センター 工作室（愛知県瀬戸市吉野町304-1）']
+    ];
+    items.forEach(([t, body]) => {
+      const h = document.createElement('h3');
+      h.textContent = t;
+      const p = document.createElement('p');
+      p.textContent = body;
+      d.append(h, p);
+    });
+    card.appendChild(d);
+    return card;
+  }
+
   // 専用リンクがあれば申し込める画面、なければ見るだけの予定表（isPublic）
   function render(data, isPublic) {
     const box = document.getElementById('events');
@@ -204,8 +241,10 @@
     if (isPublic) {
       document.getElementById('hello').textContent = '開催日と、参加予定の人のニックネームを見られます。';
       box.appendChild(joinCard());
+      box.appendChild(aboutCard(true));
     } else {
       renderHello(data.me);
+      box.appendChild(aboutCard(false));
     }
     if (data.events.length === 0) {
       box.insertAdjacentHTML('beforeend', '<div class="msg">いま受付中の開催日はありません。</div>');
@@ -259,6 +298,13 @@
         card.appendChild(p);
       }
 
+      if (ev.joined && ev.myNote) {
+        const p = document.createElement('p');
+        p.className = 'my-note';
+        p.textContent = '運営へのひとこと：' + ev.myNote;
+        card.appendChild(p);
+      }
+
       if (!ev.canceled && !isPublic) {
         const full = ev.capacity && ev.people.length >= ev.capacity && !ev.joined;
         const btn = document.createElement('button');
@@ -266,13 +312,26 @@
           btn.className = 'cancel';
           btn.textContent = '参加をやめる';
           btn.onclick = () => {
-            if (confirm(dateLabel(ev.date) + 'の参加をやめますか？')) send('cancel', ev.date, btn);
+            const msg = dateLabel(ev.date) + 'の参加をやめますか？\n\n急病などのやむを得ない場合を除き、当日のキャンセルは参加費の全額をお支払いいただきます。';
+            if (confirm(msg)) send('cancel', ev.date, btn);
           };
         } else {
           btn.className = 'join';
           btn.textContent = full ? '定員に達しました' : '参加する';
           btn.disabled = !!full;
-          btn.onclick = () => send('join', ev.date, btn);
+          let note = null;
+          if (!full) {
+            const label = document.createElement('label');
+            label.className = 'note-label';
+            label.textContent = '運営へのひとこと（なくてもかまいません）';
+            note = document.createElement('textarea');
+            note.className = 'note-input';
+            note.maxLength = 300;
+            note.placeholder = '作りたいもの、要望など';
+            label.htmlFor = note.id = 'note-' + ev.date;
+            card.append(label, note);
+          }
+          btn.onclick = () => send('join', ev.date, btn, note ? note.value : '');
         }
         card.appendChild(btn);
       }
@@ -358,11 +417,11 @@
     }
   }
 
-  async function send(action, date, btn) {
+  async function send(action, date, btn, note) {
     document.querySelectorAll('button').forEach(b => b.disabled = true);
     btn.textContent = '送信中…';
     try {
-      const data = await call({ action: action, date: date });
+      const data = await call({ action: action, date: date, note: note || '' });
       if (!data.ok) {
         showMessage(ERRORS[data.error] || ERRORS.bad_request, true);
         load();
