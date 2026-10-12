@@ -354,8 +354,16 @@ function viewMembers() {
         if (picked.size === 0) { message('カードを作る人の「カード」にチェックを入れてください。', true); return; }
         act({ action: 'makeCard', ids: [...picked] });
       } }, 'チェックした人のQRカードを作る'),
-      el('p', { class: 'sub' }, 'カードは印刷用のGoogleドキュメントで、新しいタブで開きます。'))
+      el('p', { class: 'sub' }, 'カードは印刷用のGoogleドキュメントで、新しいタブで開きます。')),
+    el('div', { class: 'card' },
+      el('h2', {}, '名簿のスプレッドシートでやること'),
+      el('p', { style: 'margin:0' }, '住所・電話番号・生年月日は、この画面には出しません。確かめるとき、登録内容を直すとき、1年参加がない人の住所・生年月日・連絡先を消すときは、', meiboLink(), 'を開いてください。'),
+      el('p', { class: 'sub' }, '1年参加がない人は、先にこの画面で「無効」にしてから、名簿で消します。'))
   ];
+}
+
+function meiboLink() {
+  return data.meiboUrl ? el('a', { href: data.meiboUrl, target: '_blank', rel: 'noopener' }, '名簿のスプレッドシート') : '名簿のスプレッドシート';
 }
 
 function viewPending() {
@@ -367,7 +375,7 @@ function viewPending() {
     p.note ? el('p', { class: 'meta', style: 'color:var(--warn)' }, p.note) : null,
     el('button', { class: 'btn main', onclick: () => act({ action: 'approve', row: p.row },
       p.nick + ' さんを承認して、参加用のリンクをメールで送りますか？') }, '承認してリンクを送る'),
-    el('p', { class: 'sub' }, '住所や電話番号は、名簿のスプレッドシートで確認できます。')
+    el('p', { class: 'sub' }, '住所や電話番号は、', meiboLink(), 'で確認できます。')
   ));
 }
 
