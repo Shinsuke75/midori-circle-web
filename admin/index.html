@@ -53,6 +53,12 @@
   .btn { display: inline-block; width: auto; margin: 6px 6px 0 0; padding: 8px 14px; font-size: 15px; font-weight: 700;
     border-radius: 10px; border: 2px solid var(--green); background: #fff; color: var(--green); }
   .btn.main { background: var(--green); color: #fff; }
+  .bdg { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; vertical-align: middle; margin-right: 4px; }
+  .bdg-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+  .bdg-grid figure { margin: 0; width: 76px; text-align: center; font-size: 12px; }
+  .bdg-grid img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; display: block; margin: 0 auto 4px; border: 1px solid var(--line); }
+  .bdg-grid button { width: 76px; padding: 6px 0; background: #fff; border: 2px solid var(--line); border-radius: 12px; font-size: 12px; font-weight: 400; color: inherit; }
+  .bdg-grid button:hover { border-color: var(--green); }
   a.btn.open { display: block; margin: 10px 0 0; padding: 12px; text-align: center; text-decoration: none; font-size: 17px; }
   .btn.warn { border-color: var(--warn); color: var(--warn); }
   .btn.small { padding: 3px 10px; font-size: 13px; margin: 0 0 0 6px; border-width: 1px; }
@@ -114,6 +120,7 @@ let session = load('midori_admin_session');
 let tab = load('midori_admin_tab') || 'events';
 let data = null;
 let busy = false;
+let giveTo = null; // 記念アイコンを送る相手の会員ID（選んでいる間だけ）
 
 function load(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
 function save(k, v) { try { v === null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch (e) {} }
@@ -360,7 +367,8 @@ function viewMembers() {
     return el('tr', {},
       el('td', {}, el('input', { type: 'checkbox', onchange: e => e.target.checked ? picked.add(m.id) : picked.delete(m.id), 'aria-label': m.nick + ' のカード' })),
       el('td', {}, el('strong', {}, m.nick), off ? el('span', { class: 'badge off' }, '無効') : null,
-        el('div', { class: 'sub' }, m.id + '　' + m.name)),
+        el('div', { class: 'sub' }, m.id + '　' + m.name),
+        (m.badges || []).length ? el('div', {}, m.badges.map(id => badgeImg(id, 'bdg'))) : null),
       el('td', { class: 'num hide-sp' }, m.count + '回'),
       el('td', { class: 'hide-sp sub' }, m.issued),
       el('td', {},
@@ -369,6 +377,12 @@ function viewMembers() {
           if (nick === null || nick.trim() === '' || nick.trim() === m.nick) return;
           act({ action: 'setNick', id: m.id, nick: nick.trim() });
         } }, '名前を変える'),
+        off ? null : el('button', { class: 'btn small', onclick: () => {
+          if (!data.badges.length) { message('先に下の「記念アイコンの一覧」に画像を足してください。', true); return; }
+          giveTo = m.id; render();
+          const c = document.getElementById('giveCard');
+          if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } }, 'アイコンを送る'),
         el('button', { class: 'btn small', onclick: () => act({ action: 'reissue', id: m.id },
           m.nick + ' さんのリンクを作り直して、メールで送りますか？今のリンクは使えなくなります。') }, '再発行'),
         off
@@ -386,12 +400,85 @@ function viewMembers() {
         if (picked.size === 0) { message('カードを作る人の「カード」にチェックを入れてください。', true); return; }
         act({ action: 'makeCard', ids: [...picked] });
       } }, 'チェックした人のQRカードを作る'),
-      el('p', { class: 'sub' }, 'カードは印刷用のGoogleドキュメントで、新しいタブで開きます。')),
+      el('p', { class: 'sub' }, 'カードは印刷用のGoogleドキュメントです。できたら、上のお知らせの「カードの文書を開く」から開きます。')),
+    giveCard(),
+    badgeCard(),
     el('div', { class: 'card' },
       el('h2', {}, '名簿のスプレッドシートでやること'),
       el('p', { style: 'margin:0' }, '住所・電話番号・生年月日は、この画面には出しません。確かめるとき、登録内容を直すとき、1年参加がない人の住所・生年月日・連絡先を消すときは、', meiboLink(), 'を開いてください。'),
       el('p', { class: 'sub' }, '1年参加がない人は、先にこの画面で「無効」にしてから、名簿で消します。'))
   ];
+}
+
+// 記念アイコンの画像
+function badgeImg(id, cls) {
+  const b = data.badges.find(x => x.id === id);
+  return b ? el('img', { class: cls, src: b.data, alt: b.name, title: b.name }) : null;
+}
+
+// 選んだ会員に送る記念アイコンを選ぶ欄（「アイコンを送る」を押したときだけ出る）
+function giveCard() {
+  const m = giveTo && data.members.find(x => x.id === giveTo);
+  if (!m) return null;
+  const has = m.badges || [];
+  const left = data.badges.filter(b => !has.includes(b.id));
+  return el('div', { class: 'card', id: 'giveCard', style: 'border:2px solid var(--green)' },
+    el('h2', {}, m.nick + ' さんに送る記念アイコン'),
+    left.length
+      ? el('div', { class: 'bdg-grid' }, left.map(b => el('button', { onclick: async () => {
+          const ok = await act({ action: 'giveBadge', id: m.id, badge: b.id }, m.nick + ' さんに「' + b.name + '」を送りますか？本人にメールでも知らせます。');
+          if (ok) { giveTo = null; render(); }
+        } }, el('img', { src: b.data, alt: '' }), b.name)))
+      : el('p', { class: 'sub' }, '一覧の記念アイコンは、もう全部持っています。'),
+    el('button', { class: 'btn small', style: 'margin:12px 0 0', onclick: () => { giveTo = null; render(); } }, 'やめる'));
+}
+
+// 記念アイコンの一覧と、画像を足す欄
+function badgeCard() {
+  const file = el('input', { type: 'file', accept: 'image/*' });
+  const name = el('input', { type: 'text', maxlength: '20', placeholder: '例：10回参加' });
+  return el('div', { class: 'card form' },
+    el('h2', {}, '記念アイコンの一覧'),
+    el('p', { class: 'sub', style: 'margin:0' }, '会員に送れる画像です。送ると、その人の「アイコンを変える」に並び、本人が選んで使えます。一人いくつでも持てます。'),
+    data.badges.length
+      ? el('div', { class: 'bdg-grid' }, data.badges.map(b => el('figure', {}, el('img', { src: b.data, alt: '' }), b.name)))
+      : el('p', { class: 'sub' }, 'まだありません。'),
+    el('h2', { style: 'margin-top:18px' }, '画像を足す'),
+    el('label', {}, '画像（正方形がきれいです。丸く切り抜いて表示します）'), file,
+    el('label', {}, '名前（20文字まで）'), name,
+    el('button', { class: 'btn main', style: 'margin-top:14px', onclick: async () => {
+      if (!file.files[0]) { message('画像を選んでください。', true); return; }
+      if (!name.value.trim()) { message('名前を入れてください。', true); return; }
+      let url;
+      try { url = await shrinkImage(file.files[0]); } catch (e) { message('画像を読み込めませんでした。PNGかJPEGの画像を選んでください。', true); return; }
+      if (!url) { message('画像が大きすぎます。もっと単純な絵柄の画像を選んでください。', true); return; }
+      act({ action: 'addBadge', name: name.value.trim(), data: url });
+    } }, '一覧に足す'));
+}
+
+// 画像を正方形に切り抜いて小さくし、data URL にする。シートの1つのセルに入る大きさ（約4万6千文字）まで縮める
+function shrinkImage(f) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const src = URL.createObjectURL(f);
+    img.onload = () => {
+      URL.revokeObjectURL(src);
+      const side = Math.min(img.naturalWidth, img.naturalHeight);
+      const sx = (img.naturalWidth - side) / 2, sy = (img.naturalHeight - side) / 2;
+      for (const size of [128, 96, 72]) {
+        const c = document.createElement('canvas');
+        c.width = c.height = size;
+        c.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, size, size);
+        for (const [type, q] of [['image/png'], ['image/webp', 0.9], ['image/jpeg', 0.85]]) {
+          const url = c.toDataURL(type, q);
+          if (url.startsWith('data:' + type) && url.length <= 46000) { resolve(url); return; }
+        }
+      }
+      resolve(null);
+    };
+    img.onerror = () => { URL.revokeObjectURL(src); reject(new Error('image')); };
+    img.src = src;
+  });
 }
 
 function meiboLink() {

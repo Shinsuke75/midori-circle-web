@@ -225,8 +225,18 @@
 
   function icon(n) { return ICONS[(n - 1) % ICONS.length] || ICONS[0]; }
 
-  // 絵柄（文字）か、特別アイコン（画像）を返す
+  // 記念アイコンの画像（参加者APIが、ページに出てくる分だけ { K001: { name, data } } で返す）
+  let BADGES = {};
+
+  // 絵柄（文字）か、特別アイコン・記念アイコン（画像）を返す
   function iconNode(n, special) {
+    if (typeof n === 'string' && BADGES[n]) {
+      const img = document.createElement('img');
+      img.className = 'sp-icon';
+      img.src = BADGES[n].data;
+      img.alt = BADGES[n].name;
+      return img;
+    }
     if (n === SPECIAL && special) {
       const img = document.createElement('img');
       img.className = 'sp-icon';
@@ -270,6 +280,7 @@
 
   // 専用リンクがあれば申し込める画面、なければ見るだけの予定表（isPublic）
   function render(data, isPublic) {
+    BADGES = data.badgeImg || {};
     const box = document.getElementById('events');
     box.textContent = '';
     if (isPublic) {
@@ -636,6 +647,14 @@
       b.onclick = () => changeIcon(SPECIAL);
       box.appendChild(b);
     }
+    (me.badges || []).filter(id => BADGES[id]).forEach(id => {
+      const b = document.createElement('button');
+      b.appendChild(iconNode(id));
+      b.title = BADGES[id].name;
+      if (me.icon === id) b.className = 'current';
+      b.onclick = () => changeIcon(id);
+      box.appendChild(b);
+    });
     ICONS.slice(0, me.maxIcon).forEach((ic, i) => {
       const b = document.createElement('button');
       b.textContent = ic;
