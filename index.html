@@ -122,6 +122,8 @@
     display: block; width: 100%; min-height: 64px; padding: 8px 10px; font-family: inherit; font-size: 16px;
     line-height: 1.5; border: 1px solid var(--line); border-radius: 10px; resize: vertical; background: #fff; color: var(--ink);
   }
+  .note-left { margin: 2px 2px 0; text-align: right; font-size: 14px; color: var(--sub); }
+  .note-left.few { color: var(--warn); font-weight: 700; }
   .my-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: var(--green-soft); font-size: 15px; white-space: pre-wrap; }
   .about summary { cursor: pointer; font-weight: 700; font-size: 17px; }
   .about h3 { margin: 14px 0 2px; font-size: 16px; }
@@ -372,7 +374,7 @@
     const noteBox = (pubValue, noteValue, parent) => {
       const pubLabel = document.createElement('label');
       pubLabel.className = 'note-label';
-      pubLabel.textContent = 'みんなへのひとこと（予定表に名前と一緒に出ます。だれでも見られます）';
+      pubLabel.textContent = 'みんなへのひとこと（60文字まで。予定表に名前と一緒に出ます。だれでも見られます）';
       const pub = document.createElement('textarea');
       pub.className = 'note-input';
       pub.maxLength = 60;
@@ -382,14 +384,28 @@
       pubLabel.htmlFor = pub.id = 'pub-' + ev.date;
       const label = document.createElement('label');
       label.className = 'note-label';
-      label.textContent = '運営へのひとこと（運営だけが見ます）';
+      label.textContent = '運営へのひとこと（300文字まで。運営だけが見ます）';
       const note = document.createElement('textarea');
       note.className = 'note-input';
       note.maxLength = 300;
       note.placeholder = '作りたいもの、要望があればご記入ください';
       note.value = noteValue || '';
       label.htmlFor = note.id = 'note-' + ev.date;
-      (parent || card).append(pubLabel, pub, label, note);
+      // 入力欄の下に、あと何文字打てるかを出す。残り1割を切ったら色を変える
+      const leftOf = box => {
+        const p = document.createElement('p');
+        p.className = 'note-left';
+        p.setAttribute('aria-live', 'polite');
+        const show = () => {
+          const left = box.maxLength - box.value.length;
+          p.textContent = 'あと' + left + '文字';
+          p.classList.toggle('few', left <= Math.ceil(box.maxLength / 10));
+        };
+        box.addEventListener('input', show);
+        show();
+        return p;
+      };
+      (parent || card).append(pubLabel, pub, leftOf(pub), label, note, leftOf(note));
       return { note: note, pub: pub };
     };
     // 申し込んだあとに、ひとことを書き直すボタン
