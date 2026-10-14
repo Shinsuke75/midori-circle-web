@@ -124,6 +124,10 @@
   }
   .note-left { margin: 2px 2px 0; text-align: right; font-size: 14px; color: var(--sub); }
   .note-left.few { color: var(--warn); font-weight: 700; }
+  .note-guide { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: var(--green-soft); font-size: 15px; }
+  .note-actions { display: flex; gap: 10px; }
+  .note-actions button { flex: 1 1 0; }
+  .note-actions button.cancel { flex: 0 0 auto; width: auto; padding: 10px 18px; }
   .my-note { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; background: var(--green-soft); font-size: 15px; white-space: pre-wrap; }
   .about summary { cursor: pointer; font-weight: 700; font-size: 17px; }
   .about h3 { margin: 14px 0 2px; font-size: 16px; }
@@ -416,12 +420,24 @@
       b.onclick = () => {
         const wrap = document.createElement('div');
         b.replaceWith(wrap);
+        const guide = document.createElement('p');
+        guide.className = 'note-guide';
+        guide.textContent = '書いたら、いちばん下の「ひとことを保存する」を押してください。';
+        wrap.appendChild(guide);
         const box = noteBox(ev.myPublicNote, ev.myNote, wrap);
+        // 保存と、書き直しをやめるボタンを横に並べる
+        const actions = document.createElement('div');
+        actions.className = 'note-actions';
         const save = document.createElement('button');
         save.className = 'join';
         save.textContent = 'ひとことを保存する';
         save.onclick = () => send('setNotes', ev.date, save, box);
-        wrap.appendChild(save);
+        const quit = document.createElement('button');
+        quit.className = 'cancel';
+        quit.textContent = 'やめる';
+        quit.onclick = () => wrap.replaceWith(b);
+        actions.append(save, quit);
+        wrap.appendChild(actions);
       };
       card.appendChild(b);
     };
