@@ -130,12 +130,14 @@ function el(tag, attrs, ...kids) {
   return e;
 }
 
-function message(text, isErr) {
+function message(text, isErr, url) {
   const m = document.getElementById('message');
   if (!text) { m.hidden = true; return; }
   m.hidden = false;
   m.className = 'msg' + (isErr ? ' err' : '');
   m.textContent = text;
+  // 新しいタブが開かなかったとき（スマホなど）のために、開くリンクも出す
+  if (url) m.append(' ', el('a', { href: url, target: '_blank', rel: 'noopener' }, '開く'));
 }
 
 async function call(body) {
@@ -226,7 +228,7 @@ async function act(body, confirmText) {
     data = r;
     busy = false;
     render();
-    message(r.msg || '');
+    message(r.msg || '', false, r.url);
     if (r.url) window.open(r.url, '_blank', 'noopener');
     return true;
   } catch (e) {
@@ -264,8 +266,22 @@ function viewEvents() {
     ...(upcoming.length ? upcoming.map(eventCard) : [el('p', { class: 'sub' }, 'これからの開催日はありません。')]),
     eventForm(),
     past.length ? el('h2', { style: 'margin-top:24px' }, '過ぎた開催日（出席のチェック）') : null,
-    ...past.map(eventCard)
+    ...past.map(eventCard),
+    insuranceForm()
   ];
+}
+
+// 画面に出ていない古い開催日（3年以内）の、保険用の名簿を作る
+function insuranceForm() {
+  const d = el('input', { type: 'date' });
+  return el('div', { class: 'card form' },
+    el('h2', {}, '保険用の名簿（日付を指定）'),
+    el('p', { class: 'sub', style: 'margin:0' }, 'その日の参加者の氏名・よみがな・生年月日・住所・電話番号などを、名簿の「保険用」シートに書き出します。押すたびに書き直します。3年前までの日を出せます。'),
+    el('label', {}, '開催日'), d,
+    el('button', { class: 'btn main', style: 'margin-top:14px', onclick: () => {
+      if (!d.value) { message('日付を入れてください。', true); return; }
+      act({ action: 'insurance', date: d.value });
+    } }, '保険用の名簿を作る'));
 }
 
 function eventCard(ev) {
@@ -295,6 +311,8 @@ function eventCard(ev) {
         if (!sel.value) { message('代理で申し込む会員を選んでください。', true); return; }
         act({ action: 'proxy', date: ev.date, id: sel.value, op: 'join' });
       } }, '代理で申し込む')),
+    ev.people.length ? el('div', { class: 'row' },
+      el('button', { class: 'btn small', style: 'margin:0', onclick: () => act({ action: 'insurance', date: ev.date }) }, '保険用の名簿を作る')) : null,
     isPast ? null : el('div', { class: 'row' },
       el('button', { class: 'btn small', style: 'margin:0', onclick: () => fillEventForm(ev) }, '内容を直す'),
       ev.canceled
