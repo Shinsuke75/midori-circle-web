@@ -59,18 +59,22 @@
   .bdg-grid img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; display: block; margin: 0 auto 4px; border: 1px solid var(--line); }
   .bdg-grid button { width: 76px; padding: 6px 0; background: #fff; border: 2px solid var(--line); border-radius: 12px; font-size: 12px; font-weight: 400; color: inherit; }
   .bdg-grid button:hover { border-color: var(--green); }
-  .bdg-grid figure .bdg-del { display: block; width: auto; margin: 4px auto 0; padding: 2px 10px; border: 1px solid var(--warn); border-radius: 999px; color: var(--warn); font-size: 12px; }
+  .bdg-grid figure .bdg-del { display: block; width: auto; margin: 10px auto 0; padding: 6px 14px; min-height: 36px; border: 1px solid var(--warn); border-radius: 999px; color: var(--warn); font-size: 12px; }
   .bdg-grid figure .bdg-del:hover { border-color: var(--warn); background: #fbeee9; }
   a.btn.open { display: block; margin: 10px 0 0; padding: 12px; text-align: center; text-decoration: none; font-size: 17px; }
   .btn.warn { border-color: var(--warn); color: var(--warn); }
-  .btn.small { padding: 3px 10px; font-size: 13px; margin: 0 0 0 6px; border-width: 1px; }
+  .btn.small { padding: 8px 14px; min-height: 40px; font-size: 14px; margin: 0 0 0 10px; border-width: 1px; }
+  /* 会員の行のボタン：指で押しやすい大きさにして間をあけ、「無効にする」は段を分けて離す */
+  .acts { display: flex; flex-wrap: wrap; gap: 10px; }
+  .acts .btn.small { margin: 0; padding: 8px 14px; min-height: 40px; font-size: 14px; }
+  .acts .sep { flex-basis: 100%; height: 8px; }
   button:disabled { opacity: .5; cursor: default; }
   .people { list-style: none; margin: 10px 0 0; padding: 0; }
-  .people li { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+  .people li { display: flex; align-items: center; gap: 18px; padding: 10px 0; border-top: 1px solid var(--line); }
   .people li .n { flex: 1; }
   .people label { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--sub); }
   input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--green); }
-  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 12px; }
   select, input[type=text], input[type=date], input[type=time], input[type=number], input[type=email] {
     font-family: inherit; font-size: 16px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink);
   }
@@ -373,7 +377,7 @@ function viewMembers() {
         (m.badges || []).length ? el('div', {}, m.badges.map(id => badgeImg(id, 'bdg'))) : null),
       el('td', { class: 'num hide-sp' }, m.count + '回'),
       el('td', { class: 'hide-sp sub' }, m.issued),
-      el('td', {},
+      el('td', {}, el('div', { class: 'acts' },
         el('button', { class: 'btn small', onclick: () => {
           const nick = prompt(m.nick + ' さんの新しいニックネーム（20文字まで）。参加の予定表にも、この名前で出ます。', m.nick);
           if (nick === null || nick.trim() === '' || nick.trim() === m.nick) return;
@@ -387,9 +391,10 @@ function viewMembers() {
         } }, 'アイコンを送る'),
         el('button', { class: 'btn small', onclick: () => act({ action: 'reissue', id: m.id },
           m.nick + ' さんのリンクを作り直して、メールで送りますか？今のリンクは使えなくなります。') }, '再発行'),
+        el('span', { class: 'sep' }),
         off
           ? el('button', { class: 'btn small', onclick: () => act({ action: 'setStatus', id: m.id, status: '有効' }, m.nick + ' さんを有効に戻しますか？前と同じリンクがまた使えるようになります。') }, '有効に戻す')
-          : el('button', { class: 'btn small warn', onclick: () => act({ action: 'setStatus', id: m.id, status: '無効' }, m.nick + ' さんを無効にしますか？リンクが使えなくなり、これからの申し込みも取り消されます。') }, '無効にする'))
+          : el('button', { class: 'btn small warn', onclick: () => act({ action: 'setStatus', id: m.id, status: '無効' }, m.nick + ' さんを無効にしますか？リンクが使えなくなり、これからの申し込みも取り消されます。') }, '無効にする')))
     );
   });
   return [
