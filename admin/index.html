@@ -53,6 +53,7 @@
   .btn { display: inline-block; width: auto; margin: 6px 6px 0 0; padding: 8px 14px; font-size: 15px; font-weight: 700;
     border-radius: 10px; border: 2px solid var(--green); background: #fff; color: var(--green); }
   .btn.main { background: var(--green); color: #fff; }
+  a.btn.open { display: block; margin: 10px 0 0; padding: 12px; text-align: center; text-decoration: none; font-size: 17px; }
   .btn.warn { border-color: var(--warn); color: var(--warn); }
   .btn.small { padding: 3px 10px; font-size: 13px; margin: 0 0 0 6px; border-width: 1px; }
   button:disabled { opacity: .5; cursor: default; }
@@ -130,14 +131,17 @@ function el(tag, attrs, ...kids) {
   return e;
 }
 
-function message(text, isErr, url) {
+function message(text, isErr, url, label) {
   const m = document.getElementById('message');
   if (!text) { m.hidden = true; return; }
   m.hidden = false;
   m.className = 'msg' + (isErr ? ' err' : '');
   m.textContent = text;
   // 新しいタブが開かなかったとき（スマホなど）のために、開くリンクも出す
-  if (url) m.append(' ', el('a', { href: url, target: '_blank', rel: 'noopener' }, '開く'));
+  if (url) {
+    m.append(el('a', { class: 'btn main open', href: url, target: '_blank', rel: 'noopener' }, label || '開く'));
+    m.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 
 async function call(body) {
@@ -228,8 +232,8 @@ async function act(body, confirmText) {
     data = r;
     busy = false;
     render();
-    message(r.msg || '', false, r.url);
-    if (r.url) window.open(r.url, '_blank', 'noopener');
+    // 作ったシートや文書は、お知らせの中の大きなボタンから開く（自動で新しいタブを開くと、ブラウザに止められることがある）
+    message(r.msg || '', false, r.url, { insurance: '保険用の名簿を開く', makeCard: 'カードの文書を開く' }[body.action]);
     return true;
   } catch (e) {
     message('通信できませんでした。電波のよいところで、もう一度お試しください。', true);
