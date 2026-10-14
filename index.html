@@ -62,6 +62,12 @@
     white-space: nowrap;
   }
   .people li.me { outline: 2px solid var(--green); }
+  .people li.has-cmt { white-space: normal; border-radius: 14px; }
+  .people .cmt { color: var(--sub); font-size: 14px; margin-left: 4px; }
+  .note-edit { display: inline-block; width: auto; margin: 8px 0 0; padding: 4px 14px; font-size: 15px; font-weight: 400; background: #fff; color: var(--green); border-width: 1px; }
+  .nick-box { flex-basis: 100%; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .nick-box input { flex: 1 1 160px; min-width: 0; padding: 8px 10px; font-size: 17px; font-family: inherit; border-radius: 10px; border: 1px solid var(--line); }
+  .picker .nick-box button { width: auto; height: auto; padding: 8px 16px; font-size: 16px; background: #fff; color: var(--green); }
   .none { color: var(--sub); font-size: 15px; }
   .badge {
     display: inline-block;
@@ -170,6 +176,8 @@
     past: 'この日はもう終わっています。',
     no_event: 'この日の予定が見つかりません。',
     busy: '混み合っています。少し待ってから、もう一度押してください。',
+    bad_nick: 'ニックネームは1〜20文字で入れてください。',
+    not_joined: 'この日には申し込んでいません。',
     bad_request: 'うまく送れませんでした。もう一度開き直してください。'
   };
 
@@ -257,7 +265,7 @@
     const box = document.getElementById('events');
     box.textContent = '';
     if (isPublic) {
-      document.getElementById('hello').textContent = '開催日と、参加予定の人のニックネームを見られます。';
+      document.getElementById('hello').textContent = '開催日と、参加予定の人のニックネーム・ひとことを見られます。';
       box.appendChild(joinCard());
       box.appendChild(aboutCard(true));
     } else {
@@ -304,12 +312,7 @@
       if (ev.people.length) {
         const ul = document.createElement('ul');
         ul.className = 'people';
-        ev.people.forEach(pp => {
-          const li = document.createElement('li');
-          li.append(iconNode(pp.icon, pp.special), ' ' + pp.nick);
-          if (ev.joined && pp.nick === data.me.nick && pp.icon === data.me.icon) li.className = 'me';
-          ul.appendChild(li);
-        });
+        ev.people.forEach(pp => ul.appendChild(personItem(pp)));
         card.appendChild(ul);
       } else {
         const p = document.createElement('p');
@@ -324,24 +327,35 @@
         wh.textContent = 'キャンセル待ち ' + ev.waiting.length + '人（登録の早い順）';
         const ul = document.createElement('ul');
         ul.className = 'people waiting';
-        ev.waiting.forEach(pp => {
-          const li = document.createElement('li');
-          li.append(iconNode(pp.icon, pp.special), ' ' + pp.nick);
-          ul.appendChild(li);
-        });
+        ev.waiting.forEach(pp => ul.appendChild(personItem(pp)));
         card.append(wh, ul);
       }
 
       if (ev.myState && ev.myNote) {
         const p = document.createElement('p');
         p.className = 'my-note';
-        p.textContent = '運営へのひとこと：' + ev.myNote;
+        p.textContent = '運営へのひとこと（運営だけが見ます）：' + ev.myNote;
         card.appendChild(p);
       }
 
       if (!ev.canceled && !isPublic) addButtons(card, ev);
       box.appendChild(card);
     });
+  }
+
+  // 予定表の1人分。みんなへのひとことがあれば横に出す
+  function personItem(pp) {
+    const li = document.createElement('li');
+    li.append(iconNode(pp.icon, pp.special), ' ' + pp.nick);
+    if (pp.comment) {
+      const c = document.createElement('span');
+      c.className = 'cmt';
+      c.textContent = '「' + pp.comment + '」';
+      li.appendChild(c);
+      li.classList.add('has-cmt');
+    }
+    if (pp.mine) li.classList.add('me');
+    return li;
   }
 
   // 申し込み・取り消し・キャンセル待ちのボタン
@@ -354,20 +368,50 @@
       card.appendChild(b);
       return b;
     };
-    const noteBox = () => {
+    // ひとことの欄。みんなへ（予定表に出る）と運営へ（運営だけが見る）の2つ。どちらもなくてよい
+    const noteBox = (pubValue, noteValue, parent) => {
+      const pubLabel = document.createElement('label');
+      pubLabel.className = 'note-label';
+      pubLabel.textContent = 'みんなへのひとこと（予定表に名前と一緒に出ます。だれでも見られます）';
+      const pub = document.createElement('textarea');
+      pub.className = 'note-input';
+      pub.maxLength = 60;
+      pub.style.minHeight = '44px';
+      pub.placeholder = '例：スプーンを作ります／初めてです';
+      pub.value = pubValue || '';
+      pubLabel.htmlFor = pub.id = 'pub-' + ev.date;
       const label = document.createElement('label');
       label.className = 'note-label';
-      label.textContent = '運営へのひとこと（なくてもかまいません）';
+      label.textContent = '運営へのひとこと（運営だけが見ます）';
       const note = document.createElement('textarea');
       note.className = 'note-input';
       note.maxLength = 300;
       note.placeholder = '作りたいもの、要望があればご記入ください';
+      note.value = noteValue || '';
       label.htmlFor = note.id = 'note-' + ev.date;
-      card.append(label, note);
-      return note;
+      (parent || card).append(pubLabel, pub, label, note);
+      return { note: note, pub: pub };
+    };
+    // 申し込んだあとに、ひとことを書き直すボタン
+    const editNotes = () => {
+      const b = document.createElement('button');
+      b.className = 'note-edit';
+      b.textContent = (ev.myNote || ev.myPublicNote) ? 'ひとことを直す' : 'ひとことを書く';
+      b.onclick = () => {
+        const wrap = document.createElement('div');
+        b.replaceWith(wrap);
+        const box = noteBox(ev.myPublicNote, ev.myNote, wrap);
+        const save = document.createElement('button');
+        save.className = 'join';
+        save.textContent = 'ひとことを保存する';
+        save.onclick = () => send('setNotes', ev.date, save, box);
+        wrap.appendChild(save);
+      };
+      card.appendChild(b);
     };
 
     if (ev.myState === 'joined') {
+      editNotes();
       button('cancel', '参加をやめる', b => {
         const msg = dateLabel(ev.date) + 'の参加をやめますか？\n\n急病などのやむを得ない場合を除き、当日のキャンセルは参加費の全額をお支払いいただきます。';
         if (confirm(msg)) send('cancel', ev.date, b);
@@ -394,6 +438,7 @@
         ? 'キャンセル待ちのお知らせは、前日18時で終わりました。'
         : 'キャンセル待ちの ' + ev.myRank + '番目です。空きが出たらメールでお知らせします。メールから6時間たって返事がない場合は、次の人に移ります。';
       card.appendChild(p);
+      editNotes();
       if (ev.canJoin) button('join', '参加する', b => send('join', ev.date, b));
       button('cancel', 'キャンセル待ちをやめる', b => {
         if (confirm(dateLabel(ev.date) + 'のキャンセル待ちをやめますか？')) send('decline', ev.date, b);
@@ -402,8 +447,8 @@
     }
 
     if (ev.canJoin) {
-      const note = noteBox();
-      button('join', '参加する', b => send('join', ev.date, b, note.value));
+      const box = noteBox();
+      button('join', '参加する', b => send('join', ev.date, b, box));
       return;
     }
 
@@ -412,9 +457,9 @@
       p.className = 'wait-rule';
       p.textContent = '定員に達しています。' + WAIT_HOW;
       card.appendChild(p);
-      const note = noteBox();
+      const box = noteBox();
       button('join', 'キャンセル待ちに登録する', b => {
-        if (confirm(dateLabel(ev.date) + 'のキャンセル待ちに登録しますか？\n\n空きが出たらメールでお知らせします。6時間たって返事がない場合は、次の人に移ります。')) send('wait', ev.date, b, note.value);
+        if (confirm(dateLabel(ev.date) + 'のキャンセル待ちに登録しますか？\n\n空きが出たらメールでお知らせします。6時間たって返事がない場合は、次の人に移ります。')) send('wait', ev.date, b, box);
       });
       return;
     }
@@ -456,13 +501,60 @@
     btn.className = 'icon-btn';
     btn.textContent = 'アイコンを変える';
     btn.onclick = () => togglePicker(me);
-    hello.append(name, count, btn);
+    const nickBtn = document.createElement('button');
+    nickBtn.className = 'icon-btn';
+    nickBtn.textContent = '名前を変える';
+    nickBtn.onclick = () => toggleNick(me);
+    hello.append(name, count, btn, nickBtn);
+  }
+
+  // ニックネームを変える欄。アイコンの欄と同じ場所に出す
+  function toggleNick(me) {
+    const box = document.getElementById('picker');
+    if (!box.hidden && box.dataset.mode === 'nick') { box.hidden = true; return; }
+    box.textContent = '';
+    box.dataset.mode = 'nick';
+    const wrap = document.createElement('div');
+    wrap.className = 'nick-box';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 20;
+    input.value = me.nick;
+    input.setAttribute('aria-label', '新しいニックネーム');
+    const save = document.createElement('button');
+    save.textContent = '変える';
+    save.onclick = () => changeNick(input.value);
+    const hint = document.createElement('p');
+    hint.className = 'hint';
+    hint.textContent = '予定表は誰でも見られるので、本名でなくてかまいません。20文字まで。';
+    wrap.append(input, save);
+    box.append(wrap, hint);
+    box.hidden = false;
+    input.focus();
+  }
+
+  async function changeNick(value) {
+    const box = document.getElementById('picker');
+    const nick = value.trim();
+    if (!nick) { showMessage(ERRORS.bad_nick, true); return; }
+    box.querySelectorAll('button, input').forEach(b => b.disabled = true);
+    try {
+      const data = await call({ action: 'setNick', nick: nick });
+      box.hidden = true;
+      if (!data.ok) { showMessage(ERRORS[data.error] || ERRORS.bad_request, true); return; }
+      showMessage('名前を「' + data.me.nick + '」に変えました。');
+      render(data);
+    } catch (e) {
+      box.hidden = true;
+      showMessage('通信できませんでした。電波の良いところで開き直してください。', true);
+    }
   }
 
   function togglePicker(me) {
     const box = document.getElementById('picker');
-    if (!box.hidden) { box.hidden = true; return; }
+    if (!box.hidden && box.dataset.mode !== 'nick') { box.hidden = true; return; }
     box.textContent = '';
+    box.dataset.mode = 'icon';
     if (me.special) {
       const b = document.createElement('button');
       b.appendChild(iconNode(SPECIAL, me.special));
@@ -501,11 +593,14 @@
     }
   }
 
-  async function send(action, date, btn, note) {
+  // notes は noteBox の戻り値（ひとことの欄）。ないときは送らない
+  async function send(action, date, btn, notes) {
     document.querySelectorAll('button').forEach(b => b.disabled = true);
     btn.textContent = '送信中…';
     try {
-      const data = await call({ action: action, date: date, note: note || '' });
+      const body = { action: action, date: date };
+      if (notes) { body.note = notes.note.value; body.publicNote = notes.pub.value; }
+      const data = await call(body);
       if (!data.ok) {
         showMessage(ERRORS[data.error] || ERRORS.bad_request, true);
         load();
@@ -515,7 +610,8 @@
         join: 'に参加を受け付けました。',
         cancel: 'の参加をやめました。',
         wait: 'のキャンセル待ちに登録しました。',
-        decline: 'のキャンセル待ちをやめました。'
+        decline: 'のキャンセル待ちをやめました。',
+        setNotes: 'のひとことを保存しました。'
       };
       showMessage(dateLabel(date) + done[action]);
       render(data);

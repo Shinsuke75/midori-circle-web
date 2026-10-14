@@ -274,7 +274,8 @@ function eventCard(ev) {
   const capa = ev.capacity ? '　定員 ' + ev.capacity + '人' : '';
   const list = el('ul', { class: 'people' }, ev.people.map(p => el('li', {},
     el('span', { class: 'n' }, p.nick, p.proxy ? el('span', { class: 'badge soft' }, '代理') : null,
-      p.note ? el('div', { class: 'sub', style: 'white-space:pre-wrap' }, '「' + p.note + '」') : null),
+      p.publicNote ? el('div', { class: 'sub', style: 'white-space:pre-wrap' }, 'みんなへ：' + p.publicNote) : null,
+      p.note ? el('div', { class: 'sub', style: 'white-space:pre-wrap' }, '運営へ：' + p.note) : null),
     el('label', {}, el('input', { type: 'checkbox', checked: p.attended, onchange: e => act({ action: 'attend', date: ev.date, id: p.id, value: e.target.checked }) }), '出席'),
     isPast ? null : el('button', { class: 'btn small warn', onclick: () => act({ action: 'proxy', date: ev.date, id: p.id, op: 'cancel' }, p.nick + ' さんの ' + ev.label + ' の参加を取り消しますか？') }, '取消')
   )));
@@ -287,6 +288,8 @@ function eventCard(ev) {
     ev.people.length ? list : null,
     ev.waiting && ev.waiting.length ? el('p', { class: 'meta' }, 'キャンセル待ち（早い順）：' +
       ev.waiting.map(w => w.nick + (w.until ? '（連絡済み・' + w.until + 'まで返事待ち）' : '')).join('、')) : null,
+    ...(ev.waiting || []).filter(w => w.note || w.publicNote).map(w => el('p', { class: 'sub', style: 'white-space:pre-wrap;margin:2px 0 0' },
+      'キャンセル待ち ' + w.nick + '：' + [w.publicNote ? 'みんなへ：' + w.publicNote : '', w.note ? '運営へ：' + w.note : ''].filter(Boolean).join('　'))),
     isPast || ev.canceled ? null : el('div', { class: 'row' }, sel,
       el('button', { class: 'btn', onclick: () => {
         if (!sel.value) { message('代理で申し込む会員を選んでください。', true); return; }
@@ -339,6 +342,11 @@ function viewMembers() {
       el('td', { class: 'num hide-sp' }, m.count + '回'),
       el('td', { class: 'hide-sp sub' }, m.issued),
       el('td', {},
+        el('button', { class: 'btn small', onclick: () => {
+          const nick = prompt(m.nick + ' さんの新しいニックネーム（20文字まで）。参加の予定表にも、この名前で出ます。', m.nick);
+          if (nick === null || nick.trim() === '' || nick.trim() === m.nick) return;
+          act({ action: 'setNick', id: m.id, nick: nick.trim() });
+        } }, '名前を変える'),
         el('button', { class: 'btn small', onclick: () => act({ action: 'reissue', id: m.id },
           m.nick + ' さんのリンクを作り直して、メールで送りますか？今のリンクは使えなくなります。') }, '再発行'),
         off
