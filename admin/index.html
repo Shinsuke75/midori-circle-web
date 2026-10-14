@@ -59,6 +59,8 @@
   .bdg-grid img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; display: block; margin: 0 auto 4px; border: 1px solid var(--line); }
   .bdg-grid button { width: 76px; padding: 6px 0; background: #fff; border: 2px solid var(--line); border-radius: 12px; font-size: 12px; font-weight: 400; color: inherit; }
   .bdg-grid button:hover { border-color: var(--green); }
+  .bdg-grid figure .bdg-del { display: block; width: auto; margin: 4px auto 0; padding: 2px 10px; border: 1px solid var(--warn); border-radius: 999px; color: var(--warn); font-size: 12px; }
+  .bdg-grid figure .bdg-del:hover { border-color: var(--warn); background: #fbeee9; }
   a.btn.open { display: block; margin: 10px 0 0; padding: 12px; text-align: center; text-decoration: none; font-size: 17px; }
   .btn.warn { border-color: var(--warn); color: var(--warn); }
   .btn.small { padding: 3px 10px; font-size: 13px; margin: 0 0 0 6px; border-width: 1px; }
@@ -441,7 +443,14 @@ function badgeCard() {
     el('h2', {}, '記念アイコンの一覧'),
     el('p', { class: 'sub', style: 'margin:0' }, '会員に送れる画像です。送ると、その人の「アイコンを変える」に並び、本人が選んで使えます。一人いくつでも持てます。'),
     data.badges.length
-      ? el('div', { class: 'bdg-grid' }, data.badges.map(b => el('figure', {}, el('img', { src: b.data, alt: '' }), b.name)))
+      ? el('div', { class: 'bdg-grid' }, data.badges.map(b => {
+          const n = data.members.filter(m => (m.badges || []).includes(b.id)).length;
+          return el('figure', {}, el('img', { src: b.data, alt: '' }), b.name,
+            el('button', { class: 'bdg-del', onclick: () => act({ action: 'removeBadge', badge: b.id },
+              '記念アイコン「' + b.name + '」を一覧から消しますか？' +
+              (n ? '\n持っている ' + n + ' 人からも外れます。使っている人は、最初の絵柄に戻ります。' : '') +
+              '\n消すと元に戻せません。') }, '消す'));
+        }))
       : el('p', { class: 'sub' }, 'まだありません。'),
     el('h2', { style: 'margin-top:18px' }, '画像を足す'),
     el('label', {}, '画像（正方形がきれいです。丸く切り抜いて表示します。SVGは動きもそのまま使えます）'), file,
