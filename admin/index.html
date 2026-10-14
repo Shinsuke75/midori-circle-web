@@ -65,6 +65,8 @@
   .btn.warn { border-color: var(--warn); color: var(--warn); }
   .btn.small { padding: 8px 14px; min-height: 40px; font-size: 14px; margin: 0 0 0 10px; border-width: 1px; }
   /* 会員の行のボタン：指で押しやすい大きさにして間をあけ、「無効にする」は段を分けて離す */
+  footer { text-align: center; color: var(--sub); font-size: 13px; padding: 8px 16px 32px; }
+  footer .ver { margin-left: 1em; font-size: 12px; opacity: .8; }
   .acts { display: flex; flex-wrap: wrap; gap: 10px; }
   .acts .btn.small { margin: 0; padding: 8px 14px; min-height: 40px; font-size: 14px; }
   .acts .sep { flex-basis: 100%; height: 8px; }
@@ -109,6 +111,7 @@
   <div id="message" class="msg" hidden></div>
   <div id="view"></div>
 </main>
+<footer>みどりの工作室 管理画面<span class="ver">v1.0</span></footer>
 <script>
 const CLIENT_ID = '79767718688-kkcivdeojo19iaktbs2he97200ulnlio.apps.googleusercontent.com';
 const API_URL = 'https://script.google.com/macros/s/AKfycbxtI6yRRm6wFwVWxJaZZWr0A7KM1ohJ1hHwjubDS15ftzXF6ZZLXGheJjYkOlP4rYBk/exec';
